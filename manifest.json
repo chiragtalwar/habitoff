@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Habitoff",
+  "version": "1.0.0",
+  "description": "A mindful habits garden Chrome extension",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvlVUvf8j4RN5VGhB3gG+OkuIXZHGHQx6hxFZOB1hTjkqU/tnxEkpqUKs+7jaE9wKPWHZBpuWS5GBqJwVwgx6f/0dGbna7IRKD8sMFbAW1g5Sz0yqvHuOWKZ4cqt4hGnVt0VrDy2rMUBxgAKpQD04nD44Qw+RGIDGDxo/2qYhQ7w3IiVv",
+  "permissions": [
+    "identity",
+    "storage"
+  ],
+  "oauth2": {
+    "client_id": "357355721903-ufh0nktj9006rrgdjrqd6jfi4rgiug8u.apps.googleusercontent.com",
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+} 

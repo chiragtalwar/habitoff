@@ -1,0 +1,11 @@
+npm install @supabase/supabase-js @tanstack/react-query tailwindcss @headlessui/react @heroicons/react framer-motion shadcn-ui date-fns zod react-hook-form
+npm install -D @types/chrome @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint prettier eslint-config-prettier husky
+npm install -D autoprefixer postcss tailwindcss
+npm install
+npx tailwindcss init -p
+npm run build
+mkdir public\icons
+npm install -D ts-node
+npx ts-node-esm scripts/save-icons.ts
+npm install -D canvas
+copy "path\to\your\downloaded\icons\*" public\icons\

@@ -1,0 +1,216 @@
+# Cursor  for Building "Habito - Mindful Habits Garden" Chrome Extension
+
+## Project Overview
+This Chrome extension helps users build mindful habits through a gamified garden interface. Each habit is represented as a plant that grows with user's consistency.
+
+## Core Principles
+1. **Type Safety**: Use TypeScript strictly with proper types and interfaces
+2. **Performance**: Optimize for fast load times and smooth animations
+3. **Security**: Follow Chrome extension security best practices
+4. **Code Quality**: Maintain clean, documented, and tested code
+5. **User Experience**: Ensure smooth, intuitive interactions
+
+## Project Structure
+```
+mindful-habits-garden/
+├── src/
+│   ├── components/           # Reusable React components
+│   │   ├── garden/          # Garden visualization components
+│   │   ├── habits/          # Habit management components
+│   │   ├── ui/              # Common UI components
+│   │   └── analytics/       # Analytics components
+│   ├── features/            # Feature-specific code
+│   │   ├── authentication/  # Auth-related code
+│   │   ├── habits/          # Habit management logic
+│   │   ├── notifications/   # Notification system
+│   │   └── analytics/       # Analytics and tracking
+│   ├── hooks/              # Custom React hooks
+│   ├── contexts/           # React contexts
+│   ├── lib/                # Utility functions and services
+│   │   ├── supabase.ts    # Supabase client
+│   │   ├── chrome.ts      # Chrome API wrappers
+│   │   └── analytics.ts   # Analytics utilities
+│   ├── types/             # TypeScript type definitions
+│   ├── styles/            # Global styles and themes
+│   ├── constants/         # App constants and configs
+│   └── pages/             # Main pages/views
+├── public/               # Static assets
+└── tests/               # Test files
+```
+
+## Technology Stack
+1. **Frontend**:
+   - React 18+ with TypeScript
+   - TailwindCSS for styling
+   - ShadcnUI for components
+   - Framer Motion for animations
+
+2. **Backend**:
+   - Supabase for data storage and auth
+   - Chrome Storage API for local data
+   - Chrome Identity API for OAuth
+
+3. **Development**:
+   - Vite for building
+   - ESLint + Prettier for code quality
+   - Jest + React Testing Library for testing
+   - Husky for git hooks
+
+## Coding Standards
+
+### TypeScript
+```typescript
+// Use explicit typing
+interface HabitType {
+  id: string;
+  name: string;
+  description: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  plantType: PlantVariant;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Use enums for constants
+enum PlantStages {
+  SEED = 'seed',
+  SPROUT = 'sprout',
+  GROWING = 'growing',
+  BLOOMING = 'blooming'
+}
+
+// Use type guards
+function isHabitComplete(habit: HabitType): boolean {
+  return habit.completedAt !== null && isToday(habit.completedAt);
+}
+```
+
+### React Components
+```typescript
+// Use functional components with proper typing
+interface HabitCardProps {
+  habit: HabitType;
+  onComplete: (id: string) => Promise<void>;
+  onEdit: (habit: HabitType) => void;
+}
+
+const HabitCard: React.FC<HabitCardProps> = ({
+  habit,
+  onComplete,
+  onEdit
+}) => {
+  // Component logic
+};
+```
+
+### Chrome APIs
+```typescript
+// Use async/await with Chrome APIs
+async function getStoredHabits(): Promise<HabitType[]> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['habits'], (result) => {
+      resolve(result.habits || []);
+    });
+  });
+}
+```
+
+## State Management
+1. Use React Context for global state
+2. Use Chrome Storage for persistence
+3. Use Supabase for cloud sync
+4. Implement optimistic updates
+
+## Security 
+1. Never store sensitive data in chrome.storage
+2. Use content security policy
+3. Validate all user inputs
+4. Sanitize data before rendering
+5. Use proper CORS policies
+6. Implement proper error boundaries
+
+## Performance Guidelines
+1. Lazy load components
+2. Implement proper memoization
+3. Optimize re-renders
+4. Use efficient data structures
+5. Implement proper caching
+6. Bundle size optimization
+
+## Testing Requirements
+1. Unit tests for utilities
+2. Component tests
+3. Integration tests
+4. E2E tests for critical flows
+5. Performance testing
+6. Security testing
+
+## Documentation
+1. JSDoc for all functions
+2. README for all directories
+3. Inline comments for complex logic
+4. API documentation
+5. User documentation
+
+## Git Workflow
+1. Use conventional commits
+2. Create feature branches
+3. Require PR reviews
+4. Maintain clean git history
+5. Use semantic versioning
+
+## Build and Deploy
+1. Use GitHub Actions for CI/CD
+2. Implement staging environment
+3. Automated testing
+4. Version management
+5. Chrome Web Store deployment
+
+## Error Handling
+```typescript
+// Implement proper error boundaries
+class ErrorBoundary extends React.Component<Props, State> {
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    logError(error, errorInfo);
+  }
+}
+
+// Use custom error types
+class HabitoError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public metadata?: Record<string, unknown>
+  ) {
+    super(message);
+    this.name = 'HabitoError';
+  }
+}
+```
+
+## Accessibility
+1. Follow WCAG 2.1 guidelines
+2. Implement keyboard navigation
+3. Use proper ARIA labels
+4. Support screen readers
+5. Maintain proper contrast
+
+## Analytics and Monitoring
+1. Implement error tracking
+2. User behavior analytics
+3. Performance monitoring
+4. Usage statistics
+5. A/B testing capability
+
+## References
+@Chrome Extension Docs: https://developer.chrome.com/docs/extensions/
+@React Docs: https://react.dev/
+@Supabase Docs: https://supabase.com/docs
+@TailwindCSS Docs: https://tailwindcss.com/docs
+@TypeScript Docs: https://www.typescriptlang.org/docs/
+@supabase chrome extension: https://github.com/supabase/supabase/tree/master/examples/chrome-extension
+
