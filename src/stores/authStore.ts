@@ -1,16 +1,10 @@
 import { create } from 'zustand';
-import { getGoogleIdToken, clearChromeToken } from '../lib/chrome';
-
-interface UserInfo {
-  email: string;
-  name: string;
-  picture: string;
-  sub: string;
-}
+import { getGoogleIdToken } from '../utils/getGoogleIdToken';
+import { supabase } from '../lib/supabase';
+import { User } from '@supabase/supabase-js';
 
 interface AuthState {
-  token: string | null;
-  userInfo: UserInfo | null;
+  user: User | null;
   isLoading: boolean;
   error: string | null;
   signIn: () => Promise<void>;
@@ -18,69 +12,75 @@ interface AuthState {
   initFromStorage: () => Promise<void>;
 }
 
-const STORAGE_KEYS = {
-  TOKEN: 'auth_token',
-  USER_INFO: 'auth_user_info',
-  LAST_SYNC: 'auth_last_sync'
-} as const;
-
 export const useAuthStore = create<AuthState>()((set) => ({
-  token: null,
-  userInfo: null,
+  user: null,
   isLoading: false,
   error: null,
 
   initFromStorage: async () => {
     try {
       set({ isLoading: true, error: null });
-      const result = await chrome.storage.local.get([
-        STORAGE_KEYS.TOKEN,
-        STORAGE_KEYS.USER_INFO,
-        STORAGE_KEYS.LAST_SYNC
-      ]);
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
 
-      const lastSync = result[STORAGE_KEYS.LAST_SYNC];
-      const now = Date.now();
-      const tokenExpired = !lastSync || (now - lastSync) > 24 * 60 * 60 * 1000; // 24 hours
-
-      if (tokenExpired) {
-        await chrome.storage.local.remove([
-          STORAGE_KEYS.TOKEN,
-          STORAGE_KEYS.USER_INFO,
-          STORAGE_KEYS.LAST_SYNC
-        ]);
-        set({ token: null, userInfo: null, isLoading: false });
-        return;
-      }
-
-      if (result[STORAGE_KEYS.TOKEN] && result[STORAGE_KEYS.USER_INFO]) {
-        set({
-          token: result[STORAGE_KEYS.TOKEN],
-          userInfo: result[STORAGE_KEYS.USER_INFO],
-          isLoading: false
-        });
+      if (session?.user) {
+        set({ user: session.user });
       }
     } catch (err: unknown) {
       const error = err instanceof Error ? err.message : 'Failed to restore auth state';
-      set({ error, isLoading: false });
+      set({ error });
+    } finally {
+      set({ isLoading: false });
     }
   },
 
   signIn: async () => {
     try {
       set({ isLoading: true, error: null });
-      const { token, userInfo } = await getGoogleIdToken();
       
-      // Store with timestamp
-      await chrome.storage.local.set({
-        [STORAGE_KEYS.TOKEN]: token,
-        [STORAGE_KEYS.USER_INFO]: userInfo,
-        [STORAGE_KEYS.LAST_SYNC]: Date.now()
+      console.log('Starting Google sign-in flow...');
+      const idToken = await getGoogleIdToken();
+      console.log('Got Google ID token');
+      
+      console.log('Signing in with Supabase...');
+      const { data: { user }, error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
       });
 
-      set({ token, userInfo, isLoading: false });
+      if (signInError) {
+        console.error('Supabase sign-in error:', signInError);
+        throw signInError;
+      }
+      if (!user) throw new Error('No user data returned');
+      
+      console.log('Successfully signed in with Supabase, creating profile...');
+      console.log('User metadata:', user.user_metadata);
+
+      // Create or update user profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata.full_name,
+          avatar_url: user.user_metadata.avatar_url,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'id'
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw profileError;
+      }
+
+      console.log('Profile created/updated successfully');
+      set({ user, isLoading: false });
     } catch (err: unknown) {
-      const error = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error('Sign in error:', err);
+      const error = err instanceof Error ? err.message : 'Failed to sign in';
       set({ error, isLoading: false });
     }
   },
@@ -88,19 +88,16 @@ export const useAuthStore = create<AuthState>()((set) => ({
   signOut: async () => {
     try {
       set({ isLoading: true, error: null });
-      await clearChromeToken();
       
-      // Clear all auth data
-      await chrome.storage.local.remove([
-        STORAGE_KEYS.TOKEN,
-        STORAGE_KEYS.USER_INFO,
-        STORAGE_KEYS.LAST_SYNC
-      ]);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
 
-      set({ token: null, userInfo: null, isLoading: false });
+      set({ user: null });
     } catch (err: unknown) {
-      const error = err instanceof Error ? err.message : 'An unknown error occurred';
-      set({ error, isLoading: false });
+      const error = err instanceof Error ? err.message : 'Failed to sign out';
+      set({ error });
+    } finally {
+      set({ isLoading: false });
     }
   }
 })); 

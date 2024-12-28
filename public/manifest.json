@@ -13,13 +13,10 @@
   },
   "oauth2": {
     "client_id": "357355721903-ufh0nktj9006rrgdjrqd6jfi4rgiug8u.apps.googleusercontent.com",
-    "scopes": [
-      "openid",
-      "email",
-      "profile"
-    ]
+    "scopes": ["openid", "email", "profile"]
   },
   "action": {
+    "default_popup": "index.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

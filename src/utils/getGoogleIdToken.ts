@@ -1,54 +1,50 @@
 export async function getGoogleIdToken(): Promise<string> {
   try {
+    console.log('Starting Google auth flow...');
     const manifest = chrome.runtime.getManifest();
-    const clientId = manifest.oauth2.client_id;
-    const redirectUri = chrome.identity.getRedirectURL();
     
-    const authParams = new URLSearchParams({
-      client_id: clientId,
-      response_type: 'id_token',
-      redirect_uri: redirectUri,
-      scope: manifest.oauth2.scopes.join(' '),
-      nonce: crypto.randomUUID(),
-      prompt: 'consent'
-    });
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams.toString()}`;
-    console.log('Starting auth flow with URL:', authUrl);
-
-    const responseUrl = await new Promise<string>((resolve, reject) => {
-      chrome.identity.launchWebAuthFlow(
-        {
-          url: authUrl,
-          interactive: true
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            console.error('Chrome runtime error:', chrome.runtime.lastError);
-            reject(new Error(chrome.runtime.lastError.message));
-            return;
-          }
-          if (!response) {
-            console.error('No response from auth flow');
-            reject(new Error('No response from auth flow'));
-            return;
-          }
-          console.log('Got response URL:', response);
-          resolve(response);
+    return new Promise((resolve, reject) => {
+      chrome.identity.getAuthToken({ interactive: true }, async function(token) {
+        if (chrome.runtime.lastError) {
+          console.error('Auth error:', chrome.runtime.lastError);
+          reject(chrome.runtime.lastError);
+          return;
         }
-      );
+        
+        if (!token) {
+          console.error('No token returned');
+          reject(new Error('No token returned'));
+          return;
+        }
+
+        try {
+          // Exchange the token for ID token
+          const response = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              client_id: manifest.oauth2.client_id,
+              grant_type: 'refresh_token',
+              refresh_token: token,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to exchange token');
+          }
+
+          const data = await response.json();
+          resolve(data.id_token);
+        } catch (error) {
+          console.error('Token exchange error:', error);
+          reject(error);
+        }
+      });
     });
-
-    const hashParams = new URLSearchParams(responseUrl.split('#')[1]);
-    const idToken = hashParams.get('id_token');
-    
-    if (!idToken) {
-      throw new Error('No ID token found in response');
-    }
-
-    return idToken;
   } catch (error) {
-    console.error('Failed to get Google ID token:', error);
+    console.error('Auth flow error:', error);
     throw error;
   }
 } 

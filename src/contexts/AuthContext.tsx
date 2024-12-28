@@ -1,13 +1,10 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
+import { User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    picture?: string;
-  } | null;
+  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -18,27 +15,37 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { token, userInfo, isLoading, error, signIn, signOut, initFromStorage } = useAuthStore();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, isLoading, error, signIn, signOut, initFromStorage } = useAuthStore();
 
   // Initialize from storage on mount
   useEffect(() => {
+    console.log('Initializing auth from storage...');
     initFromStorage();
   }, [initFromStorage]);
 
-  // Update authentication state when token changes
+  // Monitor auth state changes
   useEffect(() => {
-    setIsAuthenticated(!!token);
-  }, [token]);
+    console.log('Setting up auth state monitoring...');
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id);
+      if (session?.user) {
+        useAuthStore.setState({ user: session.user });
+      } else if (event === 'SIGNED_OUT') {
+        useAuthStore.setState({ user: null });
+      }
+    });
+
+    return () => {
+      console.log('Cleaning up auth state monitoring...');
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const value = {
-    user: userInfo ? {
-      id: userInfo.sub,
-      email: userInfo.email,
-      name: userInfo.name,
-      picture: userInfo.picture
-    } : null,
-    isAuthenticated,
+    user,
+    isAuthenticated: !!user,
     isLoading,
     error,
     signIn,
