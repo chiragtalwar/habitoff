@@ -1,7 +1,6 @@
 import { useAuth } from './contexts/AuthContext';
-import { DashboardLayout } from './components/layout/DashboardLayout';
-import { HabitGarden } from './components/habits/HabitGarden';
 import { WelcomePage } from './components/auth/WelcomePage';
+import Index from './pages/Index';
 
 function App() {
   const { user, isLoading } = useAuth();
@@ -18,11 +17,7 @@ function App() {
     return <WelcomePage />;
   }
 
-  return (
-    <DashboardLayout>
-      <HabitGarden />
-    </DashboardLayout>
-  );
+  return <Index />;
 }
 
 export default App;

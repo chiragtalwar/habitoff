@@ -48,12 +48,13 @@ export function AddHabitButton({ onAdd }: AddHabitButtonProps) {
         id: crypto.randomUUID(),
         user_id: user.id,
         title: formData.title.trim(),
-        description: formData.description.trim() || undefined,
+        description: formData.description?.trim() || null,
         frequency: formData.frequency,
         plant_type: formData.plant_type,
         streak: 0,
+        last_completed: null,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
       console.log('Creating habit:', habit);
