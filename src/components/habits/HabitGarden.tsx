@@ -6,15 +6,8 @@ import { useHabits } from '@/hooks/useHabits';
 
 export function HabitGarden() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
-  const { habits, isLoading, deleteHabit, toggleHabit } = useHabits();
+  const { habits, deleteHabit, toggleHabit } = useHabits();
 
-  if (isLoading) {
-    return (
-      <div className="text-center py-12">
-        <div className="text-lg text-gray-600">Loading your garden...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

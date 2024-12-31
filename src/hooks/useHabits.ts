@@ -6,8 +6,17 @@ import { supabase } from '@/lib/supabase';
 export function useHabits() {
   const { user } = useAuth();
   const [habits, setHabits] = useState<HabitWithCompletedDates[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
+  // Initialize from Chrome storage
+  useEffect(() => {
+    chrome.storage.local.get(['habits'], (result) => {
+      if (result.habits) {
+        setHabits(result.habits);
+      }
+    });
+  }, []);
+
+  // Fetch from Supabase and update both states
   useEffect(() => {
     if (user?.id) {
       fetchHabits();
@@ -32,10 +41,10 @@ export function useHabits() {
       })) as HabitWithCompletedDates[];
 
       setHabits(habitsWithDates);
+      // Cache in Chrome storage
+      chrome.storage.local.set({ habits: habitsWithDates });
     } catch (error) {
       console.error('Error fetching habits:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -66,7 +75,10 @@ export function useHabits() {
         completedDates: []
       } as HabitWithCompletedDates;
 
-      setHabits(prev => [...prev, newHabit]);
+      const updatedHabits = [...habits, newHabit];
+      setHabits(updatedHabits);
+      // Update Chrome storage
+      chrome.storage.local.set({ habits: updatedHabits });
       return newHabit;
     } catch (error) {
       console.error('Error creating habit:', error);
@@ -86,14 +98,11 @@ export function useHabits() {
       let newStreak: number;
 
       if (isCompleted) {
-        // Remove today's completion
         newCompletedDates = habit.completedDates.filter(date => date !== today);
         newStreak = Math.max(0, habit.streak - 1);
       } else {
-        // Add today's completion
         newCompletedDates = [...habit.completedDates, today];
         
-        // Calculate new streak
         const sortedDates = [...newCompletedDates].sort();
         let streak = 1;
         for (let i = sortedDates.length - 2; i >= 0; i--) {
@@ -121,12 +130,14 @@ export function useHabits() {
 
       if (error) throw error;
 
-      // Update local state
-      setHabits(habits.map(h => 
+      // Update local state and Chrome storage
+      const updatedHabits = habits.map(h => 
         h.id === habitId 
           ? { ...h, completedDates: newCompletedDates, streak: newStreak }
           : h
-      ));
+      );
+      setHabits(updatedHabits);
+      chrome.storage.local.set({ habits: updatedHabits });
     } catch (error) {
       console.error('Error toggling habit:', error);
       throw error;
@@ -142,7 +153,10 @@ export function useHabits() {
 
       if (error) throw error;
 
-      setHabits(habits.filter(h => h.id !== habitId));
+      const updatedHabits = habits.filter(h => h.id !== habitId);
+      setHabits(updatedHabits);
+      // Update Chrome storage
+      chrome.storage.local.set({ habits: updatedHabits });
     } catch (error) {
       console.error('Error deleting habit:', error);
       throw error;
@@ -151,7 +165,6 @@ export function useHabits() {
 
   return {
     habits,
-    isLoading,
     addHabit,
     toggleHabit,
     deleteHabit,

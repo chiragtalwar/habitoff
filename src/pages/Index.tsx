@@ -11,14 +11,8 @@ import { AnalyticsPanel } from "@/components/ui/AnalyticsPanel";
 
 export default function Index() {
   const { signOut } = useAuth();
-  const { habits, isLoading, addHabit, toggleHabit, deleteHabit } = useHabits();
+  const { habits, addHabit, toggleHabit, deleteHabit } = useHabits();
   const [isAddHabitOpen, setIsAddHabitOpen] = useState(false);
-
-  if (isLoading) {
-    return <div className="min-h-screen bg-zinc-900 grid place-items-center">
-      <div className="text-white">Loading...</div>
-    </div>;
-  }
 
   return (
     <div className="relative min-h-screen overflow-hidden">
