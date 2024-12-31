@@ -1,5 +1,5 @@
-import { Plus, BarChart3, LogOut } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { Plus, BarChart3 } from "lucide-react";
+// import { useAuth } from "@/contexts/AuthContext";
 import { QuoteSection } from "@/components/ui/QuoteSection";
 import { KPICards } from "@/components/ui/KPICards";
 import { HabitContainer } from "@/components/ui/HabitContainer";
@@ -10,7 +10,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AnalyticsPanel } from "@/components/ui/AnalyticsPanel";
 
 export default function Index() {
-  const { signOut } = useAuth();
   const { habits, addHabit, toggleHabit, deleteHabit } = useHabits();
   const [isAddHabitOpen, setIsAddHabitOpen] = useState(false);
 
@@ -31,12 +30,6 @@ export default function Index() {
             <h1 className="text-4xl font-thin tracking-[0.2em] bg-gradient-to-r from-white via-emerald-200 to-white bg-clip-text text-transparent animate-shimmer bg-[length:200%_100%]">
               HABITO
             </h1>
-            <button
-              onClick={signOut}
-              className="text-white/60 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
           </div>
           
           <div className="flex items-center justify-center h-[calc(100vh-200px)] sticky top-[100px]">
