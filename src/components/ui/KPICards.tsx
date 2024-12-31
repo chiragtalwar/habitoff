@@ -8,28 +8,52 @@ interface KPICardsProps {
 export function KPICards({ habits }: KPICardsProps) {
   // Calculate current month streak and completion
   const today = new Date();
+  const currentMonth = today.toLocaleString('default', { month: 'long' });
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const daysSoFar = Math.min(today.getDate(), daysInMonth);
+
+  // Calculate total possible completions considering frequency
+  const totalPossibleCompletions = habits.reduce((acc: number, habit) => {
+    
+    const daysForHabit = habit.frequency === 'daily' ? daysInMonth : 
+                        habit.frequency === 'weekly' ? Math.ceil(daysInMonth / 7) : 1;
+    return acc + daysForHabit;
+  }, 0);
 
   // Calculate monthly completions
-  const monthlyCompletions = habits.reduce((acc, habit) => {
+  const monthlyCompletions = habits.reduce((acc: number, habit) => {
+    console.log('Checking habit:', habit.id);
+    console.log('Completed dates:', habit.completedDates);
     const completionsThisMonth = habit.completedDates.filter(date => {
       const completionDate = new Date(date);
-      return completionDate >= startOfMonth && completionDate <= today;
+      const isToday = completionDate.toISOString().split('T')[0] === today.toISOString().split('T')[0];
+      console.log('Is today:', isToday);
+      const isInRange = isToday || (completionDate >= startOfMonth && completionDate <= today);
+      console.log('Is in range:', isInRange);
+      return isInRange;
     }).length;
+    console.log('Completions this month:', completionsThisMonth);
     return acc + completionsThisMonth;
   }, 0);
 
-  // Calculate total possible completions for the month so far
-  const totalPossibleCompletions = habits.length * daysSoFar;
+  console.log('Total monthly completions:', monthlyCompletions);
+  console.log('Total possible completions:', totalPossibleCompletions);
+
   const currentCompletion = totalPossibleCompletions > 0 
     ? Math.round((monthlyCompletions / totalPossibleCompletions) * 100)
     : 0;
 
-  // Calculate last month's completion
+  // Calculate last month's completion with the same logic
   const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
   const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+  const lastMonthDays = lastMonthEnd.getDate();
+
+  const lastMonthPossible = habits.reduce((acc: number, habit) => {
+    const daysForHabit = habit.frequency === 'daily' ? lastMonthDays : 
+                        habit.frequency === 'weekly' ? Math.ceil(lastMonthDays / 7) : 1;
+    return acc + daysForHabit;
+  }, 0);
+
   const lastMonthCompletions = habits.reduce((acc: number, habit) => {
     const completionsLastMonth = habit.completedDates.filter(date => {
       const completionDate = new Date(date);
@@ -37,12 +61,11 @@ export function KPICards({ habits }: KPICardsProps) {
     }).length;
     return acc + completionsLastMonth;
   }, 0);
-  const lastMonthDays = lastMonthEnd.getDate();
-  const lastMonthPossible = habits.length * lastMonthDays;
+
   const lastMonthCompletion = lastMonthPossible > 0 
     ? Math.round((lastMonthCompletions / lastMonthPossible) * 100)
     : 0;
-  
+
   const completionDiff = currentCompletion - lastMonthCompletion;
 
   // Calculate longest streak
@@ -120,7 +143,10 @@ export function KPICards({ habits }: KPICardsProps) {
         before:transition-opacity before:duration-300 group-hover:before:opacity-100">
         <div className="relative">
           <div className="flex justify-between items-start">
-            <h3 className="text-white/90 text-sm font-medium tracking-wide">Current Month Progress</h3>
+            <div className="space-y-0.5">
+              <h3 className="text-white/90 text-sm font-medium tracking-wide">Current Progress</h3>
+              <p className="text-habit-success/80 text-xs font-medium">{currentMonth}</p>
+            </div>
             <div className="bg-habit-success/20 p-2 rounded-full">
               <Star className="w-5 h-5 text-habit-success group-hover:animate-glow" />
             </div>
