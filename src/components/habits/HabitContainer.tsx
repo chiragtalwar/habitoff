@@ -1,6 +1,6 @@
 import { Check, Trash2, Flame } from "lucide-react";
 import { useState } from "react";
-import { FallingLeaves } from "../animations/FallingLeaves";
+import { FallingLeaves } from "@/components/animations/FallingLeaves";
 import { HabitWithCompletedDates } from "@/types/habit";
 
 const PLANT_TYPES: { value: string; emoji: string }[] = [
@@ -133,4 +133,4 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
       </div>
     </>
   );
-}
+}; 

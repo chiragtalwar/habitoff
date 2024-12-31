@@ -1,43 +1,114 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '../types/supabase';
+import { CreateHabitInput, Habit } from '../types/habit';
 
-const supabaseUrl = 'https://qdwbkkkutvgqdkrzknep.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkd2Jra2t1dHZncWRrcnprbmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0MDg2OTQsImV4cCI6MjA1MDk4NDY5NH0.V2hBROwLoBN4oBI8aMRBEbsYsyHOMGEIFDBwhn35PFw';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Custom storage implementation for Chrome extension
-const chromeStorage = {
-  getItem: async (key: string): Promise<string | null> => {
-    const result = await chrome.storage.local.get([key]);
-    return result[key] || null;
-  },
-  setItem: async (key: string, value: string): Promise<void> => {
-    await chrome.storage.local.set({ [key]: value });
-  },
-  removeItem: async (key: string): Promise<void> => {
-    await chrome.storage.local.remove([key]);
-  },
-};
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing Supabase environment variables');
+}
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    storage: chromeStorage,
-    detectSessionInUrl: false
-  },
-});
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
-export type Tables = {
-  habits: {
-    id: string;
-    user_id: string;
-    title: string;
-    description: string | null;
-    frequency: 'daily' | 'weekly' | 'monthly';
-    plant_type: 'flower' | 'tree' | 'succulent' | 'herb';
-    streak: number;
-    last_completed: string | null;
-    created_at: string;
-    updated_at: string;
-  };
-}; 
+// Function to check table structure
+export async function checkHabitsTable() {
+  console.log('Checking habits table structure...');
+  console.log('Using URL:', supabaseUrl);
+  
+  try {
+    // First check if we can connect
+    const { data: tables, error: listError } = await supabase
+      .from('habits')
+      .select('*');
+
+    if (listError) {
+      console.error('Error accessing table:', listError);
+      return { exists: false, error: listError };
+    }
+
+    console.log('\nFound habits table with', tables?.length || 0, 'records');
+    
+    if (tables && tables[0]) {
+      console.log('\nTable Structure:');
+      Object.entries(tables[0]).forEach(([key, value]) => {
+        console.log(`- ${key}: ${typeof value}`);
+      });
+    }
+
+    return {
+      exists: true,
+      recordCount: tables?.length || 0,
+      columns: tables?.[0] ? Object.keys(tables[0]) : [],
+      sample: tables?.[0]
+    };
+
+  } catch (error) {
+    console.error('Error checking table:', error);
+    return { exists: false, error };
+  }
+}
+
+// Function to add a new habit
+export async function addHabit(habit: CreateHabitInput, userId: string): Promise<Habit | null> {
+  const { data, error } = await supabase
+    .from('habits')
+    .insert([
+      {
+        ...habit,
+        user_id: userId,
+        streak: 0,
+        last_completed: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error adding habit:', error);
+    return null;
+  }
+
+  return data;
+}
+
+// Function to add sample habits
+export async function addSampleHabits() {
+  // First get the current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.error('No user logged in');
+    return;
+  }
+
+  const samples = [
+    {
+      title: 'Daily Meditation',
+      description: 'Practice mindfulness for 10 minutes',
+      frequency: 'daily',
+      plant_type: 'flower'
+    },
+    {
+      title: 'Weekly Exercise',
+      description: 'Go for a 30-minute run',
+      frequency: 'weekly',
+      plant_type: 'tree'
+    },
+    {
+      title: 'Read Books',
+      description: 'Read for 20 minutes',
+      frequency: 'daily',
+      plant_type: 'succulent'
+    }
+  ] as CreateHabitInput[];
+
+  console.log('Adding sample habits...');
+  
+  for (const habit of samples) {
+    const result = await addHabit(habit, user.id);
+    if (result) {
+      console.log('Added habit:', result.title);
+    }
+  }
+} 

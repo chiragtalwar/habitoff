@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const quotes = [
   {
@@ -12,6 +13,14 @@ const quotes = [
   {
     text: "The only way to do great work is to love what you do.",
     author: "Steve Jobs",
+  },
+  {
+    text: "It does not matter how slowly you go as long as you do not stop.",
+    author: "Confucius",
+  },
+  {
+    text: "Small daily improvements are the key to staggering long-term results.",
+    author: "Anonymous",
   },
 ];
 
@@ -39,15 +48,15 @@ export const QuoteSection = () => {
       <div className="flex gap-4 mt-6">
         <button
           onClick={prevQuote}
-          className="text-white/80 hover:text-white transition-colors"
+          className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
         >
-          ←
+          <ChevronLeft className="w-5 h-5" />
         </button>
         <button
           onClick={nextQuote}
-          className="text-white/80 hover:text-white transition-colors"
+          className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
         >
-          →
+          <ChevronRight className="w-5 h-5" />
         </button>
       </div>
     </div>

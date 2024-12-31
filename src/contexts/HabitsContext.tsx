@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
-import { Habit } from '@/types/habit';
+import { Habit, HabitWithCompletedDates } from '@/types/habit';
+import { habitService } from '@/services/habitService';
 
 interface HabitsContextType {
-  habits: Habit[];
+  habits: HabitWithCompletedDates[];
   isLoading: boolean;
   error: string | null;
   addHabit: (habit: Habit) => Promise<void>;
@@ -17,7 +18,7 @@ const HabitsContext = createContext<HabitsContextType | null>(null);
 
 export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habits, setHabits] = useState<HabitWithCompletedDates[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +39,9 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      setHabits(data || []);
+      // Transform habits to include completedDates
+      const transformedHabits = (data || []).map(habit => habitService.toUIHabit(habit));
+      setHabits(transformedHabits);
     } catch (err) {
       console.error('Error loading habits:', err);
       setError(err instanceof Error ? err.message : 'Failed to load habits');
@@ -49,9 +52,26 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 
   const addHabit = async (habit: Habit) => {
     try {
-      const { error } = await supabase.from('habits').insert([habit]);
+      const { error } = await supabase.from('habits').insert([{
+        ...habit,
+        last_completed: null,
+        streak: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }]);
+      
       if (error) throw error;
-      setHabits([habit, ...habits]);
+      
+      // Transform the habit to include completedDates before adding to state
+      const newHabit = habitService.toUIHabit({
+        ...habit,
+        last_completed: null,
+        streak: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      
+      setHabits([newHabit, ...habits]);
     } catch (err) {
       console.error('Error adding habit:', err);
       throw err;
@@ -74,7 +94,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      setHabits(habits.map(h => h.id === habit.id ? habit : h));
+      setHabits(habits.map(h => h.id === habit.id ? habitService.toUIHabit(habit) : h));
     } catch (err) {
       console.error('Error updating habit:', err);
       throw err;
@@ -102,22 +122,28 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       const habit = habits.find(h => h.id === id);
       if (!habit) throw new Error('Habit not found');
 
+      const now = new Date().toISOString();
       const updatedHabit = {
         ...habit,
         streak: habit.streak + 1,
-        updated_at: new Date().toISOString()
+        last_completed: now,
+        updated_at: now
       };
 
       const { error } = await supabase
         .from('habits')
         .update({
           streak: updatedHabit.streak,
+          last_completed: updatedHabit.last_completed,
           updated_at: updatedHabit.updated_at
         })
         .eq('id', id);
 
       if (error) throw error;
-      setHabits(habits.map(h => h.id === id ? updatedHabit : h));
+
+      // Transform the updated habit before updating state
+      const transformedHabit = habitService.toUIHabit(updatedHabit);
+      setHabits(habits.map(h => h.id === id ? transformedHabit : h));
     } catch (err) {
       console.error('Error completing habit:', err);
       throw err;

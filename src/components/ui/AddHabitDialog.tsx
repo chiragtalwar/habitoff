@@ -3,8 +3,8 @@ import { X } from "lucide-react";
 import { HabitFormData, HabitFrequency, PlantType } from "@/types/habit";
 
 interface AddHabitDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSubmit: (habit: HabitFormData) => Promise<void>;
 }
 
@@ -21,7 +21,7 @@ const FREQUENCIES: { value: HabitFrequency; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
 ];
 
-export const AddHabitDialog = ({ isOpen, onClose, onSubmit }: AddHabitDialogProps) => {
+export function AddHabitDialog({ open, onOpenChange, onSubmit }: AddHabitDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [frequency, setFrequency] = useState<HabitFrequency>('daily');
@@ -42,6 +42,7 @@ export const AddHabitDialog = ({ isOpen, onClose, onSubmit }: AddHabitDialogProp
         plant_type: plantType,
       });
       resetForm();
+      onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create habit');
     } finally {
@@ -57,7 +58,7 @@ export const AddHabitDialog = ({ isOpen, onClose, onSubmit }: AddHabitDialogProp
     setError(null);
   };
 
-  if (!isOpen) return null;
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
@@ -65,7 +66,7 @@ export const AddHabitDialog = ({ isOpen, onClose, onSubmit }: AddHabitDialogProp
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-serif text-white">New Habit</h2>
           <button
-            onClick={onClose}
+            onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
             className="text-white/60 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
           >
@@ -164,4 +165,4 @@ export const AddHabitDialog = ({ isOpen, onClose, onSubmit }: AddHabitDialogProp
       </div>
     </div>
   );
-}; 
+} 

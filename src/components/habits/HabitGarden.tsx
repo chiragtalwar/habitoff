@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { HabitList } from '@/components/habits/HabitList';
 import { HabitGrid } from '@/components/habits/HabitGrid';
-import { AddHabitButton } from '@/components/habits/AddHabitButton';
-import { useHabits } from '@/contexts/HabitsContext';
+import { AddHabitButton } from "@/components/habits/AddHabitButton";
+import { useHabits } from '@/hooks/useHabits';
 
 export function HabitGarden() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
-  const { habits, isLoading, addHabit } = useHabits();
+  const { habits, isLoading, deleteHabit, toggleHabit } = useHabits();
 
   if (isLoading) {
     return (
@@ -48,7 +48,7 @@ export function HabitGarden() {
               List
             </button>
           </div>
-          <AddHabitButton onAdd={addHabit} />
+          <AddHabitButton />
         </div>
       </div>
 
@@ -61,7 +61,11 @@ export function HabitGarden() {
           </p>
         </div>
       ) : viewMode === 'grid' ? (
-        <HabitGrid habits={habits} />
+        <HabitGrid 
+          habits={habits} 
+          onDeleteHabit={deleteHabit}
+          onToggleHabit={toggleHabit}
+        />
       ) : (
         <HabitList habits={habits} />
       )}
