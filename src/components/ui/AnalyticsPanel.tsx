@@ -94,7 +94,7 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               stroke="white"
               strokeWidth="1"
               fill="transparent"
-              className="opacity-20"
+              className="opacity-0 group-hover:opacity-20 transition-opacity duration-300"
             />
             {/* Background circle */}
             <circle
@@ -116,7 +116,7 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               fill="transparent"
               strokeDasharray={circumference}
               strokeDashoffset={progress}
-              className="drop-shadow-[0_0_3px_rgba(255,255,255,0.5)] transition-all duration-500"
+              className="drop-shadow-none group-hover:drop-shadow-[0_0_3px_rgba(255,255,255,0.5)] transition-all duration-500"
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">

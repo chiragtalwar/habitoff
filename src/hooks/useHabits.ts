@@ -22,7 +22,7 @@ export function useHabits() {
         .from('habits')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
@@ -66,7 +66,7 @@ export function useHabits() {
         completedDates: []
       } as HabitWithCompletedDates;
 
-      setHabits(prev => [newHabit, ...prev]);
+      setHabits(prev => [...prev, newHabit]);
       return newHabit;
     } catch (error) {
       console.error('Error creating habit:', error);

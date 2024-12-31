@@ -20,6 +20,8 @@ export interface Habit {
 export interface HabitWithCompletedDates extends Omit<Habit, 'last_completed'> {
   last_completed: string | null;
   completedDates: string[]; // Array of YYYY-MM-DD dates
+  currentStreak?: number;   // Optional current streak
+  longestStreak?: number;  // Optional longest streak
 }
 
 // Utility type to ensure dates are in YYYY-MM-DD format

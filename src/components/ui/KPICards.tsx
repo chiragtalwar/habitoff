@@ -51,6 +51,40 @@ export function KPICards({ habits }: KPICardsProps) {
     return Math.max(acc, streak);
   }, 0);
 
+  // Calculate current streak if not provided
+  const calculateCurrentStreak = (dates: string[]): number => {
+    if (dates.length === 0) return 0;
+    
+    const sortedDates = [...dates].sort((a, b) => b.localeCompare(a));
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    
+    // Check if the habit was completed today or yesterday
+    if (sortedDates[0] !== today && sortedDates[0] !== yesterday) {
+      return 0;
+    }
+
+    let streak = 1;
+    for (let i = 1; i < sortedDates.length; i++) {
+      const current = new Date(sortedDates[i]);
+      const previous = new Date(sortedDates[i - 1]);
+      const dayDiff = (previous.getTime() - current.getTime()) / (1000 * 60 * 60 * 24);
+      
+      if (dayDiff === 1) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    
+    return streak;
+  };
+
+  // Calculate current streak
+  const actualCurrentStreak = Math.max(
+    ...habits.map(habit => calculateCurrentStreak(habit.completedDates))
+  );
+
   // Get motivational message based on completion
   const getMotivationalMessage = (completion: number) => {
     if (completion === 0) return "Start your journey! 🌱";
@@ -80,15 +114,15 @@ export function KPICards({ habits }: KPICardsProps) {
   return (
     <div className="flex gap-6 p-4">
       <div className="group flex-1 relative bg-gradient-to-br from-habit via-habit/90 to-habit-accent rounded-xl p-6 
-        shadow-[0_8px_30px_rgb(0,0,0,0.12),0_0_15px_rgba(0,0,0,0.15)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.15),0_0_25px_rgba(0,0,0,0.2)]
+        shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.15),0_0_25px_rgba(var(--habit-success-rgb),0.3)]
         transition-all duration-300 ease-in-out hover:scale-[1.02]
         before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-br before:from-habit-success/10 before:to-transparent before:opacity-0 
         before:transition-opacity before:duration-300 group-hover:before:opacity-100">
         <div className="relative">
           <div className="flex justify-between items-start">
             <h3 className="text-white/90 text-sm font-medium tracking-wide">Current Month Progress</h3>
-            <div className="bg-habit-success/20 p-2 rounded-full animate-pulse">
-              <Star className="w-5 h-5 text-habit-success animate-glow" />
+            <div className="bg-habit-success/20 p-2 rounded-full">
+              <Star className="w-5 h-5 text-habit-success group-hover:animate-glow" />
             </div>
           </div>
           
@@ -115,34 +149,34 @@ export function KPICards({ habits }: KPICardsProps) {
       </div>
       
       <div className="group flex-1 relative bg-gradient-to-br from-habit via-habit/90 to-habit-accent rounded-xl p-6 
-        shadow-[0_8px_30px_rgb(0,0,0,0.12),0_0_15px_rgba(255,165,0,0.15)] hover:shadow-[0_8px_30px_rgba(255,165,0,0.15),0_0_25px_rgba(255,165,0,0.2)]
+        shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.15),0_0_25px_rgba(var(--habit-highlight-rgb),0.3)]
         transition-all duration-300 ease-in-out hover:scale-[1.02]
         before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-br before:from-habit-highlight/10 before:to-transparent before:opacity-0 
         before:transition-opacity before:duration-300 group-hover:before:opacity-100">
         <div className="relative">
           <div className="flex justify-between items-start">
-            <h3 className="text-white/90 text-sm font-medium tracking-wide">Longest Streak</h3>
-            <div className="bg-habit-highlight/20 p-2 rounded-full animate-pulse">
-              <Trophy className="w-5 h-5 text-habit-highlight animate-glow" />
+            <h3 className="text-white/90 text-sm font-medium tracking-wide">Current Streak</h3>
+            <div className="bg-habit-highlight/20 p-2 rounded-full">
+              <Trophy className="w-5 h-5 text-habit-highlight group-hover:animate-glow" />
             </div>
           </div>
           
           <div className="mt-2">
             <div className="flex justify-between items-end mb-1">
               <div className="flex items-baseline">
-                <p className="text-habit-highlight text-5xl font-bold tracking-tight">{longestStreak}</p>
+                <p className="text-habit-highlight text-5xl font-bold tracking-tight">{actualCurrentStreak}</p>
                 <span className="text-white/50 text-lg ml-1">days</span>
               </div>
               <div className="flex flex-col items-end">
-                <span className="text-white/90 text-base font-medium leading-none">100%</span>
-                <span className="text-white/50 text-[10px] leading-tight">mastery</span>
+                <span className="text-white/90 text-base font-medium leading-none">{longestStreak}</span>
+                <span className="text-white/50 text-[10px] leading-tight">best streak</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <p className="text-habit-highlight/90 text-sm font-medium">{getStreakMessage(longestStreak)}</p>
+              <p className="text-habit-highlight/90 text-sm font-medium">{getStreakMessage(actualCurrentStreak)}</p>
               <div className="flex items-center text-habit-highlight text-xs">
                 <TrendingUp className="w-3 h-3 mr-0.5" />
-                <span>Personal Best!</span>
+                <span>{actualCurrentStreak === longestStreak ? 'All-time Best!' : 'Keep Going!'}</span>
               </div>
             </div>
           </div>
