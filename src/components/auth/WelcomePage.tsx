@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 
-export function WelcomePage() {
+export default function WelcomePage() {
   const { signIn } = useAuth();
 
   return (

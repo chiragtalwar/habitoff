@@ -1,182 +1,274 @@
-import { useMemo } from "react";
-import { HabitWithCompletedDates } from "../../types/habit";
-import { Timeline } from "./Timeline";
-import { HabitGrid } from "./HabitGrid";
-import { cn } from "../../lib/utils";
+import { useState } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { HabitWithCompletedDates } from '@/types/habit';
+import { Timeline } from './Timeline';
+import { cn } from '../../lib/utils';
 
 interface AnalyticsPanelProps {
   habits: HabitWithCompletedDates[];
 }
 
 export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
-  const habitStats = useMemo(() => {
-    const allCompletedDates = habits.reduce((acc, habit) => [...acc, ...habit.completedDates], [] as string[]);
-    const now = new Date();
-    
-    // Current periods
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
+  const [currentHabitIndex, setCurrentHabitIndex] = useState(0);
+  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('week');
+  const currentHabit = habits[currentHabitIndex];
+
+  const nextHabit = () => {
+    setCurrentHabitIndex((prev) => (prev + 1) % habits.length);
+  };
+
+  const prevHabit = () => {
+    setCurrentHabitIndex((prev) => (prev - 1 + habits.length) % habits.length);
+  };
+
+  // Calculate stats for circular progress
+  const calculateStats = () => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
 
     // Previous periods
-    const startOfLastYear = new Date(now.getFullYear() - 1, 0, 1);
-    const endOfLastYear = new Date(now.getFullYear() - 1, 11, 31);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-    const startOfLastWeek = new Date(startOfWeek);
-    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
-    const endOfLastWeek = new Date(startOfWeek);
-    endOfLastWeek.setDate(endOfLastWeek.getDate() - 1);
+    const lastWeekStart = new Date(startOfWeek);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastYearStart = new Date(today.getFullYear() - 1, 0, 1);
 
-    // Current period completions
-    const yearlyCompletions = allCompletedDates.filter(date => new Date(date) >= startOfYear).length;
-    const monthlyCompletions = allCompletedDates.filter(date => new Date(date) >= startOfMonth).length;
-    const weeklyCompletions = allCompletedDates.filter(date => new Date(date) >= startOfWeek).length;
+    const stats = habits.reduce((acc, habit) => {
+      const completedDates = habit.completedDates.map(date => new Date(date));
+      
+      // Current periods
+      const weeklyCount = completedDates.filter(date => date >= startOfWeek && date <= today).length;
+      const monthlyCount = completedDates.filter(date => date >= startOfMonth && date <= today).length;
+      const yearlyCount = completedDates.filter(date => date >= startOfYear && date <= today).length;
 
-    // Previous period completions
-    const lastYearCompletions = allCompletedDates.filter(date => {
-      const d = new Date(date);
-      return d >= startOfLastYear && d <= endOfLastYear;
-    }).length;
-    const lastMonthCompletions = allCompletedDates.filter(date => {
-      const d = new Date(date);
-      return d >= startOfLastMonth && d <= endOfLastMonth;
-    }).length;
-    const lastWeekCompletions = allCompletedDates.filter(date => {
-      const d = new Date(date);
-      return d >= startOfLastWeek && d <= endOfLastWeek;
-    }).length;
+      // Previous periods
+      const lastWeekCount = completedDates.filter(date => date >= lastWeekStart && date < startOfWeek).length;
+      const lastMonthCount = completedDates.filter(date => date >= lastMonthStart && date < startOfMonth).length;
+      const lastYearCount = completedDates.filter(date => date >= lastYearStart && date < startOfYear).length;
 
-    // Calculate percentages
-    const totalYearlyPossible = habits.length * 365;
-    const totalMonthlyPossible = habits.length * endOfLastMonth.getDate();
-    const totalWeeklyPossible = habits.length * 7;
+      return {
+        weekly: acc.weekly + weeklyCount,
+        monthly: acc.monthly + monthlyCount,
+        yearly: acc.yearly + yearlyCount,
+        lastWeek: acc.lastWeek + lastWeekCount,
+        lastMonth: acc.lastMonth + lastMonthCount,
+        lastYear: acc.lastYear + lastYearCount
+      };
+    }, {
+      weekly: 0,
+      monthly: 0,
+      yearly: 0,
+      lastWeek: 0,
+      lastMonth: 0,
+      lastYear: 0
+    });
 
-    const yearlyPercentage = Math.min(Math.round((yearlyCompletions / totalYearlyPossible) * 100), 100);
-    const monthlyPercentage = Math.min(Math.round((monthlyCompletions / totalMonthlyPossible) * 100), 100);
-    const weeklyPercentage = Math.min(Math.round((weeklyCompletions / totalWeeklyPossible) * 100), 100);
-
-    const lastYearPercentage = Math.min(Math.round((lastYearCompletions / totalYearlyPossible) * 100), 100);
-    const lastMonthPercentage = Math.min(Math.round((lastMonthCompletions / totalMonthlyPossible) * 100), 100);
-    const lastWeekPercentage = Math.min(Math.round((lastWeekCompletions / totalWeeklyPossible) * 100), 100);
+    const getDiff = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Math.round(((current - previous) / previous) * 100);
+    };
 
     return {
-      yearly: yearlyPercentage,
-      monthly: monthlyPercentage,
-      weekly: weeklyPercentage,
-      yearlyDiff: yearlyPercentage - lastYearPercentage,
-      monthlyDiff: monthlyPercentage - lastMonthPercentage,
-      weeklyDiff: weeklyPercentage - lastWeekPercentage,
+      weekly: Math.round((stats.weekly / (habits.length * 7)) * 100),
+      monthly: Math.round((stats.monthly / (habits.length * 30)) * 100),
+      yearly: Math.round((stats.yearly / (habits.length * 365)) * 100),
+      weeklyDiff: getDiff(stats.weekly, stats.lastWeek),
+      monthlyDiff: getDiff(stats.monthly, stats.lastMonth),
+      yearlyDiff: getDiff(stats.yearly, stats.lastYear)
     };
-  }, [habits]);
+  };
+
+  const habitStats = calculateStats();
 
   const CircularProgress = ({ value, label, color, diff }: { value: number; label: string; color: string; diff: number }) => {
-    const radius = 25;
+    const radius = 20;
     const circumference = 2 * Math.PI * radius;
     const progress = (100 - value) * circumference / 100;
 
     const getComparisonText = () => {
-      if (label === "This Week") return "last week";
-      if (label === "This Month") return "last month";
-      return "last year";
+      if (label === "This Week") return "vs last week";
+      if (label === "This Month") return "vs last month";
+      return "vs last year";
     };
 
     return (
-      <div className="flex flex-col items-center group">
-        <div className="relative w-16 h-16 transition-transform duration-300 group-hover:scale-110">
+      <div className="flex flex-col items-center">
+        <div className="relative w-[56px] h-[56px]">
           <svg className="w-full h-full transform -rotate-90">
-            {/* Outer glow */}
             <circle
-              cx="32"
-              cy="32"
-              r={radius + 2}
-              stroke="white"
-              strokeWidth="1"
-              fill="transparent"
-              className="opacity-0 group-hover:opacity-20 transition-opacity duration-300"
-            />
-            {/* Background circle */}
-            <circle
-              cx="32"
-              cy="32"
+              cx="28"
+              cy="28"
               r={radius}
               stroke="currentColor"
-              strokeWidth="3"
+              strokeWidth="2.5"
               fill="transparent"
-              className="text-white/10"
+              className="text-white/5"
             />
-            {/* Progress circle */}
             <circle
-              cx="32"
-              cy="32"
+              cx="28"
+              cy="28"
               r={radius}
               stroke={color}
-              strokeWidth="3"
+              strokeWidth="2.5"
               fill="transparent"
               strokeDasharray={circumference}
               strokeDashoffset={progress}
-              className="drop-shadow-none group-hover:drop-shadow-[0_0_3px_rgba(255,255,255,0.5)] transition-all duration-500"
+              className="transition-all duration-500"
+              style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-sm font-medium text-white tracking-wider">{value}%</span>
+            <span className="text-base font-medium text-white">{value}%</span>
           </div>
         </div>
-        <div className="flex flex-col items-center">
-          <span className="mt-2 text-xs font-light text-white/80 tracking-wide group-hover:text-white transition-colors duration-300">{label}</span>
-          {diff !== 0 && (
-            <div className={cn(
-              "text-[10px] font-medium mt-0.5",
-              diff > 0 ? "text-emerald-400" : "text-orange-400"
-            )}>
-              {diff > 0 ? '+' : ''}{diff}% vs {getComparisonText()}
-            </div>
-          )}
+        <span className="mt-1 text-xs text-white/80">{label}</span>
+        <div className={cn(
+          "text-[10px] font-medium mt-0.5",
+          diff > 0 ? "text-emerald-300" : "text-orange-300"
+        )}>
+          {diff > 0 ? '+' : '-'}{Math.abs(diff)}% {getComparisonText()}
         </div>
       </div>
     );
   };
 
+  // Get the current month's calendar
+  const getMonthCalendar = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    
+    const days = [];
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      days.push(null); // Empty cells for days before the 1st
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(i);
+    }
+
+    return days;
+  };
+
+  const monthDays = getMonthCalendar();
+  const today = new Date();
+  const currentMonth = today.toLocaleString('default', { month: 'long' });
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 p-2">
       {/* Progress Insights */}
-      <div className="mt-1 p-5 rounded-2xl bg-green-900/90 backdrop-blur-sm border border-green-700/90 shadow-xl">
-        <h2 className="text-sm font-medium text-white mb-3">Progress Insights</h2>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 backdrop-blur-sm border border-orange-500/20 hover:border-orange-500/30 transition-all duration-300">
+      <div className="rounded-xl bg-[#0F4435] p-3">
+        <h2 className="text-sm font-medium text-white mb-2">Progress Insights</h2>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-lg bg-[#0B3B2D] p-2">
             <CircularProgress 
               value={habitStats.yearly} 
               label="This Year" 
-              color="#f59e0b"
+              color="#4ade80"
               diff={habitStats.yearlyDiff}
             />
           </div>
-          <div className="p-3 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-500/5 backdrop-blur-sm border border-sky-500/20 hover:border-sky-500/30 transition-all duration-300">
+          <div className="rounded-lg bg-[#0B3B2D] p-2">
             <CircularProgress 
               value={habitStats.weekly} 
               label="This Week" 
-              color="#0ea5e9"
+              color="#4ade80"
               diff={habitStats.weeklyDiff}
             />
           </div>
-          <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500/10 to-violet-500/5 backdrop-blur-sm border border-violet-500/20 hover:border-violet-500/30 transition-all duration-300">
+          <div className="rounded-lg bg-[#0B3B2D] p-2">
             <CircularProgress 
               value={habitStats.monthly} 
               label="This Month" 
-              color="#8b5cf6"
+              color="#4ade80"
               diff={habitStats.monthlyDiff}
             />
           </div>
         </div>
       </div>
 
-      {/* Timeline Chart */}
-      <Timeline habits={habits} />
+      {/* Activity Timeline */}
+      <div className="rounded-xl bg-[#0F4435] p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-medium text-white">Activity Timeline</h2>
+          <div className="flex gap-4 text-xs">
+            {(['week', 'month', 'year'] as const).map((range) => (
+              <button
+                key={range}
+                onClick={() => setTimeRange(range)}
+                className={cn(
+                  "transition-colors",
+                  timeRange === range
+                    ? "text-emerald-400"
+                    : "text-white/60 hover:text-white/80"
+                )}
+              >
+                {range.charAt(0).toUpperCase() + range.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="bg-[#0B3B2D] rounded-lg p-3 h-[140px]">
+          <Timeline habits={habits} timeRange={timeRange} />
+        </div>
+      </div>
 
-      {/* Weekly Habit Grid */}
-      <div className="mt-6">
-        <HabitGrid habits={habits} />
+      {/* Monthly Calendar */}
+      <div className="rounded-xl bg-[#0F4435] p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-medium text-white">{currentMonth} Progress</h2>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={prevHabit}
+              className="w-5 h-5 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center"
+            >
+              <ArrowLeft className="w-3 h-3" />
+            </button>
+            <span className="text-xs text-white/60 bg-[#0B3B2D] px-2 py-0.5 rounded-full">{currentHabit?.title || 'No habits'}</span>
+            <button
+              onClick={nextHabit}
+              className="w-5 h-5 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center"
+            >
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            <div key={day} className="text-[10px] font-medium text-emerald-300/80 text-center">
+              {day}
+            </div>
+          ))}
+          {monthDays.map((day, index) => {
+            if (day === null) {
+              return <div key={`empty-${index}`} className="aspect-square" />;
+            }
+
+            const date = new Date(today.getFullYear(), today.getMonth(), day);
+            const dateStr = date.toISOString().split('T')[0];
+            const isCompleted = currentHabit?.completedDates.includes(dateStr);
+            const isToday = day === today.getDate();
+            const isPast = date < today;
+
+            return (
+              <div
+                key={day}
+                className={cn(
+                  "aspect-square rounded-md flex items-center justify-center text-[10px] transition-all duration-300",
+                  isCompleted ? "bg-emerald-500/40 text-emerald-200" : "bg-[#0B3B2D]",
+                  isToday && "ring-1 ring-emerald-500/30",
+                  !isPast && "opacity-50",
+                  "text-white/80"
+                )}
+              >
+                {day}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

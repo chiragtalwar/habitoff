@@ -1,23 +1,30 @@
 import { useAuth } from './contexts/AuthContext';
-import { WelcomePage } from './components/auth/WelcomePage';
-import Index from './pages/Index';
+import { lazy, Suspense } from 'react';
+
+// Lazy load components
+const WelcomePage = lazy(() => import('./components/auth/WelcomePage'));
+const Index = lazy(() => import('./pages/Index'));
+
+// Lightweight loading component
+const LoadingFallback = () => (
+  <div className="fixed inset-0 bg-black flex items-center justify-center">
+    <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 function App() {
   const { user, isLoading } = useAuth();
 
+  // Show minimal loading state
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
+    return <LoadingFallback />;
   }
 
-  if (!user) {
-    return <WelcomePage />;
-  }
-
-  return <Index />;
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      {!user ? <WelcomePage /> : <Index />}
+    </Suspense>
+  );
 }
 
 export default App;

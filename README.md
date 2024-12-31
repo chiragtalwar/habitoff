@@ -1,159 +1,71 @@
-I'll create a detailed Product Requirements Document (PRD) for our Habito - Mindful Habits Garden Chrome Extension.
+# Habito - Mindful Habits Garden 🌱
 
-# Habito - Mindful Habits Garden PRD
+A beautiful Chrome extension that helps you build and maintain habits through a gamified garden interface. Watch your habits grow like plants as you maintain consistency!
 
-## Overview
-Habito is a Chrome extension that helps users build and maintain mindful habits by gamifying the habit-tracking experience through a garden metaphor. Each habit is represented as a plant that grows as users maintain their streaks.
+## Features ✨
 
-## Core Features
+- **Beautiful Garden Interface**: Each habit is represented as a plant that grows with your consistency
+- **Progress Tracking**: Visual progress indicators and statistics
+- **Daily Streaks**: Track your daily streaks and get motivated
+- **Mindful Quotes**: Get inspired with a new mindful quote each time you open a new tab
+- **Beautiful Analytics**: Track your progress with intuitive visualizations
+- **Multiple Plant Types**: Choose from different plant types for your habits
 
-### 1. Authentication & User Management
-- Google OAuth2 sign-in integration
-- Secure token management using Chrome's storage API
-- User profile management with customizable settings
-- Seamless sync across devices using Supabase backend
+## Installation 🚀
 
-### 2. Habit Garden Dashboard
-- **Visual Garden Interface**
-  - Each habit represented as a unique plant
-  - Plants grow through different stages based on streak length
-  - Visual weather effects based on habit completion rates
-  - Day/night cycle based on user's local time
+### From Chrome Web Store
+1. Visit the [Chrome Web Store](https://chrome.google.com/webstore) (coming soon)
+2. Click "Add to Chrome"
+3. Click "Add Extension" in the popup
 
-- **Habit Management**
-  - Create new habits with customizable:
-    - Name and description
-    - Frequency (daily, weekly, specific days)
-    - Reminder times
-    - Plant type selection
-  - Edit existing habits
-  - Archive completed or unwanted habits
-  - Categorize habits (Health, Learning, Fitness, etc.)
-
-### 3. Progress Tracking
-- **Streak System**
-  - Daily streak counting
-  - Streak freeze feature (limited uses)
-  - Recovery mechanics for broken streaks
-  - Weekly and monthly streak analytics
-
-- **Achievement System**
-  - Milestone badges for consistent habit maintenance
-  - Special plant variations unlocked through achievements
-  - Seasonal challenges and rewards
-  - Social sharing of achievements
-
-### 4. Analytics & Insights
-- **Personal Statistics**
-  - Habit completion rates
-  - Streak history
-  - Best performing habits
-  - Time-based analytics (daily, weekly, monthly views)
-
-- **Progress Reports**
-  - Weekly email summaries
-  - Monthly progress insights
-  - Habit correlation analysis
-  - Personalized improvement suggestions
-
-### 5. Notification System
-- Chrome browser notifications
-- Customizable reminder times
-- Smart notification scheduling
-- Positive reinforcement messages
-
-## Technical Architecture
-
-### Frontend
-- React with TypeScript
-- TailwindCSS for styling
-- Chrome Extension APIs
-- Service Worker for background tasks
-
-### Backend (Supabase)
-- User authentication
-- Real-time data sync
-- Habit data storage
-- Analytics processing
-
-### Database Schema
-```sql
-users
-- id
-- email
-- created_at
-- settings
-
-habits
-- id
-- user_id
-- name
-- description
-- frequency
-- plant_type
-- created_at
-- archived_at
-
-habit_logs
-- id
-- habit_id
-- completed_at
-- streak_count
-
-achievements
-- id
-- user_id
-- type
-- unlocked_at
-
-settings
-- id
-- user_id
-- notification_preferences
-- theme_preferences
+### For Development
+1. Clone this repository
+```bash
+git clone https://github.com/yourusername/habito.git
+cd habito
 ```
 
-## User Experience
+2. Install dependencies
+```bash
+npm install
+```
 
-### New User Flow
-1. Install extension
-2. Sign in with Google
-3. Tutorial walkthrough
-4. Create first habit
-5. Set notification preferences
+3. Build the extension
+```bash
+npm run build
+```
 
-### Daily User Flow
-1. Click extension icon
-2. View garden dashboard
-3. Check off completed habits
-4. View progress animations
-5. Receive positive reinforcement
+4. Load the extension in Chrome:
+   - Open Chrome and navigate to `chrome://extensions`
+   - Enable "Developer mode" in the top right
+   - Click "Load unpacked"
+   - Select the `dist` folder from this project
 
-## Performance Requirements
-- Load time < 2 seconds
-- Smooth animations (60fps)
-- Offline functionality
-- Real-time sync when online
-- Minimal memory footprint
+## Usage 🌿
 
-## Security Requirements
-- Secure OAuth2 implementation
-- Encrypted data storage
-- Safe token management
-- Privacy-focused data handling
+1. Open a new tab to see your habit garden
+2. Click "+" to add a new habit
+3. Choose a plant type and set your habit details
+4. Mark habits as complete daily to watch your garden grow
+5. View your progress in the analytics panel
+6. Stay motivated with daily mindful quotes
 
-## Future Enhancements (v2)
-1. Social features
-   - Friend gardens
-   - Habit challenges
-   - Community achievements
+## Technology Stack 💻
 
-2. Advanced Analytics
-   - AI-powered insights
-   - Habit pattern recognition
-   - Custom reporting
+- React 18+ with TypeScript
+- TailwindCSS for styling
+- Supabase for data storage
+- Chrome Extension APIs
+- Framer Motion for animations
 
-3. Integration Features
-   - Calendar sync
-   - Task manager integration
-   - Health app connectivity
+## Contributing 🤝
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License 📝
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support 💖
+
+If you like this project, please give it a ⭐️ on GitHub!

@@ -1,12 +1,10 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { HabitWithCompletedDates } from "../../types/habit";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { cn } from "../../lib/utils";
-
-type TimeRange = 'week' | 'month' | 'year';
 
 interface TimelineProps {
   habits: HabitWithCompletedDates[];
+  timeRange: 'week' | 'month' | 'year';
 }
 
 interface ChartDataPoint {
@@ -23,9 +21,7 @@ interface DotProps {
   };
 }
 
-export const Timeline = ({ habits }: TimelineProps) => {
-  const [timeRange, setTimeRange] = useState<TimeRange>('month');
-
+export const Timeline = ({ habits, timeRange }: TimelineProps) => {
   const getEmoji = (percentage: number): string => {
     if (percentage >= 80) return '🌟';
     if (percentage >= 60) return '✨';
@@ -123,108 +119,87 @@ export const Timeline = ({ habits }: TimelineProps) => {
   }, [habits, timeRange, timeRangeData]);
 
   return (
-    <div className="mt-4 p-6 rounded-2xl bg-green-900/90 backdrop-blur-lg border border-green-700/90 shadow-xl">
-      <div className="flex items-center justify-between mb-6 px-2">
-        <h2 className="text-sm font-medium text-white">Activity Timeline</h2>
-        <div className="flex gap-0.5 text-[10px]">
-          {(['week', 'month', 'year'] as const).map((range) => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={cn(
-                "px-2 py-1 rounded-full transition-colors",
-                timeRange === range
-                  ? "bg-emerald-500/20 text-emerald-400"
-                  : "text-white/70 hover:text-white"
-              )}
-            >
-              {range.charAt(0).toUpperCase() + range.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="h-[120px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart 
-            data={chartData} 
-            margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
-          >
-            <XAxis 
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              interval={0}
-              tick={({ x, y, payload }: { x: number; y: number; payload: { value: string; payload?: { isToday?: boolean } } }) => {
-                const isToday = payload.payload?.isToday;
+    <div className="h-[120px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart 
+          data={chartData} 
+          margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
+        >
+          <XAxis 
+            dataKey="label"
+            axisLine={false}
+            tickLine={false}
+            interval={0}
+            tick={({ x, y, payload }: { x: number; y: number; payload: { value: string; payload?: { isToday?: boolean } } }) => {
+              const isToday = payload.payload?.isToday;
+              return (
+                <text
+                  x={x}
+                  y={y + 10}
+                  fill={isToday ? 'rgb(52 211 153)' : 'rgb(255 255 255 / 0.7)'}
+                  fontSize={10}
+                  textAnchor="middle"
+                  fontWeight={isToday ? 500 : 400}
+                >
+                  {isToday ? '✨ Today' : payload.value}
+                </text>
+              );
+            }}
+          />
+          <YAxis 
+            hide={true}
+            domain={[0, 100]}
+          />
+          <Tooltip 
+            content={(props: any) => {
+              const { active, payload } = props;
+              if (active && payload && payload.length) {
+                const percentage = Number(payload[0].value);
                 return (
-                  <text
-                    x={x}
-                    y={y + 10}
-                    fill={isToday ? 'rgb(52 211 153)' : 'rgb(255 255 255 / 0.7)'}
-                    fontSize={10}
-                    textAnchor="middle"
-                    fontWeight={isToday ? 500 : 400}
-                  >
-                    {isToday ? '✨ Today' : payload.value}
-                  </text>
-                );
-              }}
-            />
-            <YAxis 
-              hide={true}
-              domain={[0, 100]}
-            />
-            <Tooltip 
-              content={(props: any) => {
-                const { active, payload } = props;
-                if (active && payload && payload.length) {
-                  const percentage = Number(payload[0].value);
-                  return (
-                    <div className="rounded-lg border border-emerald-800/50 bg-green-950/90 px-3 py-2 shadow-xl">
-                      <div className="text-[10px] font-medium text-emerald-400 flex flex-col items-center gap-1">
-                        <span>{getEmoji(percentage)}</span>
-                        <span>{percentage}%</span>
-                      </div>
+                  <div className="rounded-lg border border-emerald-800/50 bg-green-950/90 px-3 py-2 shadow-xl">
+                    <div className="text-[10px] font-medium text-emerald-400 flex flex-col items-center gap-1">
+                      <span>{getEmoji(percentage)}</span>
+                      <span>{percentage}%</span>
                     </div>
-                  );
-                }
-                return null;
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="completion"
-              stroke="rgb(16 185 129 / 0.7)"
-              strokeWidth={2}
-              isAnimationActive={false}
-              label={{
-                position: 'top',
-                fill: 'rgb(255 255 255 / 0.7)',
-                fontSize: 10,
-                formatter: (value: number) => `${value}%`,
-                dy: -8
-              }}
-              dot={(props: DotProps) => {
-                const { cx, cy, payload } = props;
-                return (
-                  <circle
-                    cx={cx}
-                    cy={cy}
-                    r={payload.isToday ? 5 : 4}
-                    fill={payload.isToday ? "rgb(52 211 153)" : "rgb(16 185 129)"}
-                    strokeWidth={0}
-                  />
+                  </div>
                 );
-              }}
-              activeDot={{
-                r: 6,
-                fill: "rgb(16 185 129)",
-                strokeWidth: 0
-              }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+              }
+              return null;
+            }}
+          />
+          <Line
+            type="monotone"
+            dataKey="completion"
+            stroke="rgb(16 185 129 / 0.7)"
+            strokeWidth={2}
+            isAnimationActive={false}
+            label={{
+              position: 'top',
+              fill: 'rgb(255 255 255 / 0.7)',
+              fontSize: 10,
+              formatter: (value: number) => `${value}%`,
+              dy: -8
+            }}
+            dot={(props: DotProps) => {
+              const { cx, cy, payload } = props;
+              return (
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={payload.isToday ? 5 : 4}
+                  fill={payload.isToday ? "rgb(52 211 153)" : "rgb(16 185 129)"}
+                  strokeWidth={0}
+                />
+              );
+            }}
+            activeDot={{
+              r: 6,
+              fill: "rgb(16 185 129)",
+              strokeWidth: 0
+            }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 };

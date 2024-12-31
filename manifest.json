@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Habitoff",
+  "name": "Habito",
   "version": "1.0.0",
-  "description": "A mindful habits garden Chrome extension",
+  "description": "Habit Garden",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvlVUvf8j4RN5VGhB3gG+OkuIXZHGHQx6hxFZOB1hTjkqU/tnxEkpqUKs+7jaE9wKPWHZBpuWS5GBqJwVwgx6f/0dGbna7IRKD8sMFbAW1g5Sz0yqvHuOWKZ4cqt4hGnVt0VrDy2rMUBxgAKpQD04nD44Qw+RGIDGDxo/2qYhQ7w3IiVv",
   "permissions": [
     "identity",
