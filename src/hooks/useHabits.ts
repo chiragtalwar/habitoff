@@ -1,173 +1,117 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { HabitWithCompletedDates, CreateHabitInput } from '@/types/habit';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect, useCallback } from 'react';
+import { HabitWithCompletedDates, CreateHabitInput } from '../types/habit';
+import { useAuth } from '../contexts/AuthContext';
+import { habitService } from '../services/habitService';
 
 export function useHabits() {
   const { user } = useAuth();
   const [habits, setHabits] = useState<HabitWithCompletedDates[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  // Initialize from Chrome storage
-  useEffect(() => {
-    chrome.storage.local.get(['habits'], (result) => {
-      if (result.habits) {
-        setHabits(result.habits);
-      }
-    });
-  }, []);
-
-  // Fetch from Supabase and update both states
+  // Load habits whenever user changes
   useEffect(() => {
     if (user?.id) {
-      fetchHabits();
+      loadHabits();
+    } else {
+      setHabits([]);
+      setIsLoading(false);
     }
   }, [user]);
 
-  const fetchHabits = async () => {
+  // Set up sync on visibility change
+  useEffect(() => {
     if (!user?.id) return;
-    
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadHabits();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user]);
+
+  // Load habits with proper error handling
+  const loadHabits = useCallback(async () => {
+    if (!user?.id) return;
+
     try {
-      const { data, error } = await supabase
-        .from('habits')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      const habitsWithDates = data.map(habit => ({
-        ...habit,
-        completedDates: habit.last_completed ? [habit.last_completed.split('T')[0]] : []
-      })) as HabitWithCompletedDates[];
-
-      setHabits(habitsWithDates);
-      // Cache in Chrome storage
-      chrome.storage.local.set({ habits: habitsWithDates });
-    } catch (error) {
-      console.error('Error fetching habits:', error);
+      setIsLoading(true);
+      setError(null);
+      const loadedHabits = await habitService.getHabits(user.id);
+      setHabits(loadedHabits);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to load habits'));
+      console.error('Error loading habits:', err);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [user]);
 
-  const addHabit = async (habitData: CreateHabitInput) => {
+  const addHabit = useCallback(async (habitData: CreateHabitInput) => {
     if (!user?.id) {
-      throw new Error('No user ID found');
+      throw new Error('User must be logged in to add habits');
     }
 
     try {
-      const { data, error } = await supabase
-        .from('habits')
-        .insert([{
-          ...habitData,
-          id: crypto.randomUUID(),
-          user_id: user.id,
-          streak: 0,
-          last_completed: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const newHabit = {
-        ...data,
-        completedDates: []
-      } as HabitWithCompletedDates;
-
-      const updatedHabits = [...habits, newHabit];
-      setHabits(updatedHabits);
-      // Update Chrome storage
-      chrome.storage.local.set({ habits: updatedHabits });
-      return newHabit;
-    } catch (error) {
-      console.error('Error creating habit:', error);
-      throw error;
+      await habitService.addHabit(user.id, habitData);
+      await loadHabits(); // Reload to ensure consistency
+    } catch (err) {
+      console.error('Error adding habit:', err);
+      throw err;
     }
-  };
+  }, [user, loadHabits]);
 
-  const toggleHabit = async (habitId: string) => {
+  const toggleHabit = useCallback(async (habitId: string) => {
+    if (!user?.id) {
+      throw new Error('User must be logged in to toggle habits');
+    }
+
     try {
       const habit = habits.find(h => h.id === habitId);
       if (!habit) return;
 
       const today = new Date().toISOString().split('T')[0];
       const isCompleted = habit.completedDates.includes(today);
-      
-      let newCompletedDates: string[];
-      let newStreak: number;
 
       if (isCompleted) {
-        newCompletedDates = habit.completedDates.filter(date => date !== today);
-        newStreak = Math.max(0, habit.streak - 1);
+        await habitService.unmarkHabitComplete(habitId);
       } else {
-        newCompletedDates = [...habit.completedDates, today];
-        
-        const sortedDates = [...newCompletedDates].sort();
-        let streak = 1;
-        for (let i = sortedDates.length - 2; i >= 0; i--) {
-          const curr = new Date(sortedDates[i + 1]);
-          const prev = new Date(sortedDates[i]);
-          const diffDays = Math.floor((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-          if (diffDays <= 1) {
-            streak++;
-          } else {
-            break;
-          }
-        }
-        newStreak = streak;
+        await habitService.markHabitComplete(habitId);
       }
 
-      // Update in Supabase
-      const { error } = await supabase
-        .from('habits')
-        .update({
-          last_completed: isCompleted ? null : new Date().toISOString(),
-          streak: newStreak,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', habitId);
-
-      if (error) throw error;
-
-      // Update local state and Chrome storage
-      const updatedHabits = habits.map(h => 
-        h.id === habitId 
-          ? { ...h, completedDates: newCompletedDates, streak: newStreak }
-          : h
-      );
-      setHabits(updatedHabits);
-      chrome.storage.local.set({ habits: updatedHabits });
-    } catch (error) {
-      console.error('Error toggling habit:', error);
-      throw error;
+      await loadHabits(); // Reload to ensure consistency
+    } catch (err) {
+      console.error('Error toggling habit:', err);
+      throw err;
     }
-  };
+  }, [user, habits, loadHabits]);
 
-  const deleteHabit = async (habitId: string) => {
+  const deleteHabit = useCallback(async (habitId: string) => {
+    if (!user?.id) {
+      throw new Error('User must be logged in to delete habits');
+    }
+
     try {
-      const { error } = await supabase
-        .from('habits')
-        .delete()
-        .eq('id', habitId);
-
-      if (error) throw error;
-
-      const updatedHabits = habits.filter(h => h.id !== habitId);
-      setHabits(updatedHabits);
-      // Update Chrome storage
-      chrome.storage.local.set({ habits: updatedHabits });
-    } catch (error) {
-      console.error('Error deleting habit:', error);
-      throw error;
+      await habitService.deleteHabit(user.id, habitId);
+      await loadHabits(); // Reload to ensure consistency
+    } catch (err) {
+      console.error('Error deleting habit:', err);
+      throw err;
     }
-  };
+  }, [user, loadHabits]);
 
   return {
     habits,
+    isLoading,
+    error,
     addHabit,
     toggleHabit,
     deleteHabit,
-    fetchHabits
+    refreshHabits: loadHabits
   };
 } 

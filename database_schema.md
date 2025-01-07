@@ -1,5 +1,3 @@
-
-
 Here’s a structured document format for your database that you can feed into Cursor:
 
 ---
@@ -46,6 +44,37 @@ CREATE TABLE public.habits (
 );
 ```
 
+**RLS Policies:**
+```sql
+-- Enable RLS
+ALTER TABLE public.habits ENABLE ROW LEVEL SECURITY;
+
+-- Policy for inserting habits
+CREATE POLICY "Users can create their own habits"
+ON public.habits FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = user_id);
+
+-- Policy for viewing habits
+CREATE POLICY "Users can view their own habits"
+ON public.habits FOR SELECT
+TO authenticated
+USING (auth.uid() = user_id);
+
+-- Policy for updating habits
+CREATE POLICY "Users can update their own habits"
+ON public.habits FOR UPDATE
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- Policy for deleting habits
+CREATE POLICY "Users can delete their own habits"
+ON public.habits FOR DELETE
+TO authenticated
+USING (auth.uid() = user_id);
+```
+
 ---
 
 ### 2. **habit_completions**
@@ -71,6 +100,48 @@ CREATE TABLE public.habit_completions (
   CONSTRAINT habit_completions_pkey PRIMARY KEY (id),
   CONSTRAINT habit_completions_habit_id_completed_date_key UNIQUE (habit_id, completed_date),
   CONSTRAINT habit_completions_habit_id_fkey FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
+);
+```
+
+**RLS Policies:**
+```sql
+-- Enable RLS
+ALTER TABLE public.habit_completions ENABLE ROW LEVEL SECURITY;
+
+-- Policy for inserting completions
+CREATE POLICY "Users can insert completions for their habits"
+ON public.habit_completions FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.habits
+    WHERE id = habit_completions.habit_id
+    AND user_id = auth.uid()
+  )
+);
+
+-- Policy for viewing completions
+CREATE POLICY "Users can view completions for their habits"
+ON public.habit_completions FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.habits
+    WHERE id = habit_completions.habit_id
+    AND user_id = auth.uid()
+  )
+);
+
+-- Policy for deleting completions
+CREATE POLICY "Users can delete completions for their habits"
+ON public.habit_completions FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.habits
+    WHERE id = habit_completions.habit_id
+    AND user_id = auth.uid()
+  )
 );
 ```
 

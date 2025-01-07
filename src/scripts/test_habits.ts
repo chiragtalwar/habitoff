@@ -35,7 +35,7 @@ async function testHabitOperations() {
 
     // 4. Mark habit as complete
     console.log('\nMarking habit as complete...');
-    await habitService.markHabitComplete(user.id, addedHabit.id);
+    await habitService.markHabitComplete(addedHabit.id);
     
     // 5. Verify completion
     const updatedHabits = await habitService.getHabits(user.id);
@@ -50,7 +50,7 @@ async function testHabitOperations() {
 
     // 6. Unmark completion
     console.log('\nUnmarking habit completion...');
-    await habitService.unmarkHabitComplete(user.id, addedHabit.id);
+    await habitService.unmarkHabitComplete(addedHabit.id);
     
     // 7. Verify unmarking
     const finalHabits = await habitService.getHabits(user.id);
