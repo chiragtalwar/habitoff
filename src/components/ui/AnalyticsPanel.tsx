@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { HabitWithCompletedDates } from '@/types/habit';
 import { Timeline } from './Timeline';
 import { cn } from '../../lib/utils';
@@ -11,7 +11,6 @@ interface AnalyticsPanelProps {
 export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
   const [currentHabitIndex, setCurrentHabitIndex] = useState(0);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('week');
-  const [monthOffset, setMonthOffset] = useState(0);
   const currentHabit = habits[currentHabitIndex];
 
   const nextHabit = () => {
@@ -156,31 +155,15 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
 
   const monthDays = getMonthCalendar();
   const today = new Date();
-
-  // Get the current month with offset
-  const getCurrentMonth = () => {
-    const date = new Date();
-    date.setMonth(date.getMonth() + monthOffset);
-    return date.toLocaleString('default', { month: 'long' });
-  };
-
-  const handlePrevMonth = () => {
-    setMonthOffset(prev => prev - 1);
-  };
-
-  const handleNextMonth = () => {
-    if (monthOffset < 0) {
-      setMonthOffset(prev => prev + 1);
-    }
-  };
+  const currentMonth = today.toLocaleString('default', { month: 'long' });
 
   return (
-    <div className="space-y-1.5 p-1.5 ml-auto">
+    <div className="space-y-2 p-2">
       {/* Progress Insights */}
-      <div className="rounded-xl bg-[#0F4435] p-2.5">
-        <h2 className="text-sm font-medium text-white mb-1.5">Progress Insights</h2>
-        <div className="grid grid-cols-3 gap-1.5">
-          <div className="rounded-lg bg-[#0B3B2D] p-1.5">
+      <div className="rounded-xl bg-[#0F4435] p-3">
+        <h2 className="text-sm font-medium text-white mb-2">Progress Insights</h2>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-lg bg-[#0B3B2D] p-2">
             <CircularProgress 
               value={habitStats.yearly} 
               label="This Year" 
@@ -188,7 +171,7 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               diff={habitStats.yearlyDiff}
             />
           </div>
-          <div className="rounded-lg bg-[#0B3B2D] p-1.5">
+          <div className="rounded-lg bg-[#0B3B2D] p-2">
             <CircularProgress 
               value={habitStats.weekly} 
               label="This Week" 
@@ -196,7 +179,7 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               diff={habitStats.weeklyDiff}
             />
           </div>
-          <div className="rounded-lg bg-[#0B3B2D] p-1.5">
+          <div className="rounded-lg bg-[#0B3B2D] p-2">
             <CircularProgress 
               value={habitStats.monthly} 
               label="This Month" 
@@ -208,10 +191,10 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
       </div>
 
       {/* Activity Timeline */}
-      <div className="rounded-xl bg-[#0F4435] p-2.5">
-        <div className="flex items-center justify-between mb-1.5">
+      <div className="rounded-xl bg-[#0F4435] p-3">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-medium text-white">Activity Timeline</h2>
-          <div className="flex gap-3 text-xs">
+          <div className="flex gap-4 text-xs">
             {(['week', 'month', 'year'] as const).map((range) => (
               <button
                 key={range}
@@ -228,70 +211,32 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
             ))}
           </div>
         </div>
-        <div className="bg-[#0B3B2D] rounded-lg p-2.5 h-[130px]">
+        <div className="bg-[#0B3B2D] rounded-lg p-3 h-[140px]">
           <Timeline habits={habits} timeRange={timeRange} />
         </div>
       </div>
 
       {/* Monthly Calendar */}
-      <div className="rounded-xl bg-[#0F4435] p-2.5">
+      <div className="rounded-xl bg-[#0F4435] p-3">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handlePrevMonth}
-              className="p-0.5 rounded-lg bg-white/5 text-white/30 hover:bg-emerald-500/20 hover:text-emerald-300 
-                transition-all duration-200 transform hover:scale-105 active:scale-95"
-            >
-              <ChevronLeft className="w-3 h-3" />
-            </button>
-            <h2 className="text-sm font-medium text-white">{getCurrentMonth()}</h2>
-            <button
-              onClick={handleNextMonth}
-              disabled={monthOffset >= 0}
-              className={`p-0.5 rounded-lg bg-white/5 text-white/30
-                transition-all duration-200 transform hover:scale-105 active:scale-95
-                ${monthOffset >= 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-emerald-500/20 hover:text-emerald-300'}`}
-            >
-              <ChevronRight className="w-3 h-3" />
-            </button>
-            {currentHabit && (
-              <div className="text-xs text-emerald-400/90 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
-                {(() => {
-                  const currentDate = new Date();
-                  currentDate.setMonth(currentDate.getMonth() + monthOffset);
-                  const daysInMonth = new Date(
-                    currentDate.getFullYear(),
-                    currentDate.getMonth() + 1,
-                    0
-                  ).getDate();
-                  
-                  const completedDays = currentHabit.completedDates.filter(date => {
-                    const [year, month] = date.split('-').map(Number);
-                    return year === currentDate.getFullYear() && month === (currentDate.getMonth() + 1);
-                  }).length;
-                  
-                  return `${completedDays}/${daysInMonth}`;
-                })()}
-              </div>
-            )}
-          </div>
+          <h2 className="text-sm font-medium text-white">{currentMonth} Progress</h2>
           <div className="flex items-center gap-1">
             <button
               onClick={prevHabit}
-              className="w-4 h-4 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center"
+              className="w-5 h-5 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center"
             >
-              <ArrowLeft className="w-2.5 h-2.5" />
+              <ArrowLeft className="w-3 h-3" />
             </button>
-            <span className="text-xs text-white/60 bg-[#0B3B2D] px-1.5 py-0.5 rounded-full">{currentHabit?.title || 'No habits'}</span>
+            <span className="text-xs text-white/60 bg-[#0B3B2D] px-2 py-0.5 rounded-full">{currentHabit?.title || 'No habits'}</span>
             <button
               onClick={nextHabit}
-              className="w-4 h-4 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center"
+              className="w-5 h-5 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center"
             >
-              <ArrowRight className="w-2.5 h-2.5" />
+              <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-0.5">
+        <div className="grid grid-cols-7 gap-1">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div key={day} className="text-[10px] font-medium text-emerald-300/80 text-center">
               {day}
@@ -303,24 +248,20 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
             }
 
             const date = new Date(today.getFullYear(), today.getMonth(), day);
-            const isCompleted = currentHabit?.completedDates.some(completedDate => {
-              const [completedYear, completedMonth, completedDay] = completedDate.split('-').map(Number);
-              return completedYear === date.getFullYear() && 
-                     (completedMonth - 1) === date.getMonth() &&
-                     completedDay === day;
-            });
-            const isToday = date.toDateString() === today.toDateString();
-            const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+            const dateStr = date.toISOString().split('T')[0];
+            const isCompleted = currentHabit?.completedDates.includes(dateStr);
+            const isToday = day === today.getDate();
+            const isPast = date < today;
 
             return (
               <div
                 key={day}
                 className={cn(
-                  "aspect-square rounded-sm flex items-center justify-center text-[10px] transition-all duration-300",
-                  isCompleted ? "bg-emerald-500/80 text-emerald-50 font-medium" : "bg-[#0B3B2D]",
-                  isToday && "ring-1 ring-emerald-400",
-                  !isPast && "opacity-40",
-                  "text-white/90 hover:bg-emerald-600/40"
+                  "aspect-square rounded-md flex items-center justify-center text-[10px] transition-all duration-300",
+                  isCompleted ? "bg-emerald-500/40 text-emerald-200" : "bg-[#0B3B2D]",
+                  isToday && "ring-1 ring-emerald-500/30",
+                  !isPast && "opacity-50",
+                  "text-white/80"
                 )}
               >
                 {day}
