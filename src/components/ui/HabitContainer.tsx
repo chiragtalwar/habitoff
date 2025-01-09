@@ -23,11 +23,11 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
   // Get current date and calculate the week's dates
   const today = new Date();
   const currentDay = today.getDay();
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   
-  // Calculate the start of the week (Sunday) with offset
+  // Calculate the start of the week (Monday) with offset
   const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - currentDay + (weekOffset * 7));
+  startOfWeek.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1) + (weekOffset * 7));
 
   const handlePrevWeek = () => {
     setWeekOffset(prev => prev - 1);
@@ -113,14 +113,21 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 bg-orange-500/10 px-2.5 py-1 rounded-lg 
-                    group-hover:bg-orange-500/20 transition-all duration-300 border border-orange-500/20">
-                    <span className="text-orange-400 font-semibold tracking-wide">{habit.streak}</span>
-                    <Flame 
-                      className={`w-4 h-4 transition-colors duration-300
-                        ${habit.streak > 0 ? 'text-orange-400' : 'text-orange-400/40'}
-                      `}
-                    />
+                  <div className="group/streak relative p-2 rounded-lg bg-gradient-to-br from-habit-highlight/30 via-habit-highlight/20 to-habit-highlight/30
+                    transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-habit-highlight/20
+                    border border-habit-highlight/30 hover:border-habit-highlight/50">
+                    <div className="flex items-center gap-2 relative z-10">
+                      <span className="text-habit-highlight text-sm font-bold tracking-wide">{habit.currentStreak || 0}</span>
+                      <Flame 
+                        className={`w-4 h-4 transition-all duration-300 group-hover/streak:scale-110
+                          ${(habit.currentStreak || 0) > 0 
+                            ? 'text-habit-highlight' 
+                            : 'text-habit-highlight/40'}`}
+                      />
+                    </div>
+                    {(habit.currentStreak || 0) > 0 && (
+                      <span className="absolute inset-0 rounded-lg bg-gradient-to-r from-habit-highlight/10 to-transparent" />
+                    )}
                   </div>
                   <div className="flex gap-1">
                     <button

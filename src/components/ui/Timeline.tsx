@@ -37,7 +37,7 @@ export const Timeline = ({ habits, timeRange }: TimelineProps) => {
     if (timeRange === 'week') {
       // Get Monday of current week
       const monday = new Date(today);
-      monday.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+      monday.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
       monday.setHours(0, 0, 0, 0);
 
       // Generate dates for the whole week

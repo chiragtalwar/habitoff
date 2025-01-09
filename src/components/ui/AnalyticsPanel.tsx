@@ -292,7 +292,7 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
           </div>
         </div>
         <div className="grid grid-cols-7 gap-0.5">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
             <div key={day} className="text-[10px] font-medium text-emerald-300/80 text-center">
               {day}
             </div>

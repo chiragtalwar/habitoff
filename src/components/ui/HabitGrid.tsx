@@ -13,7 +13,7 @@ export const HabitGrid = ({ habits }: HabitGridProps) => {
   const currentWeek = useMemo(() => {
     const today = new Date();
     const monday = new Date(today);
-    monday.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+    monday.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
     monday.setHours(0, 0, 0, 0);
 
     const days: Date[] = [];

@@ -5,6 +5,11 @@ const HABITS_STORAGE_KEY = 'habits';
 let localStorageCache: HabitWithCompletedDates[] | null = null;
 
 export const habitService = {
+  // Helper function to get today's date in user's timezone
+  getTodayInUserTimezone(): string {
+    return new Date().toLocaleDateString('en-CA'); // Returns YYYY-MM-DD in local timezone
+  },
+
   // Convert database habit to UI habit with all completion dates
   async toUIHabit(dbHabit: Habit): Promise<HabitWithCompletedDates> {
     // Fetch all completion dates for this habit
@@ -254,17 +259,22 @@ export const habitService = {
   async markHabitComplete(habitId: string): Promise<void> {
     try {
       const now = new Date().toISOString();
+      const todayLocal = this.getTodayInUserTimezone(); // Get date in user's timezone
 
       // Update local cache first
       const habits = await this.getLocalHabits();
       const updatedHabits = habits.map(h => {
         if (h.id === habitId) {
-          const today = now.split('T')[0];
+          const newCompletedDates = [...h.completedDates, todayLocal].sort();
+          const newCurrentStreak = this.calculateCurrentStreak(newCompletedDates);
+          const newLongestStreak = this.calculateLongestStreak(newCompletedDates);
           return {
             ...h,
             last_completed: now,
-            completedDates: [...h.completedDates, today].sort(),
-            currentStreak: this.calculateCurrentStreak([...h.completedDates, today])
+            completedDates: newCompletedDates,
+            currentStreak: newCurrentStreak,
+            longestStreak: newLongestStreak,
+            streak: newCurrentStreak // Keep the streak field in sync
           };
         }
         return h;
@@ -281,13 +291,19 @@ export const habitService = {
 
       if (completionError) throw completionError;
 
-      // Update habit's last_completed in Supabase
-      const { error: habitError } = await supabase
-        .from('habits')
-        .update({ last_completed: now })
-        .eq('id', habitId);
+      // Update habit's last_completed and streak in Supabase
+      const habit = updatedHabits.find(h => h.id === habitId);
+      if (habit) {
+        const { error: habitError } = await supabase
+          .from('habits')
+          .update({ 
+            last_completed: now,
+            streak: habit.currentStreak // Keep Supabase streak in sync
+          })
+          .eq('id', habitId);
 
-      if (habitError) throw habitError;
+        if (habitError) throw habitError;
+      }
     } catch (error) {
       console.error('Error marking habit complete:', error);
       throw error;
@@ -296,40 +312,47 @@ export const habitService = {
 
   async unmarkHabitComplete(habitId: string): Promise<void> {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const todayLocal = this.getTodayInUserTimezone(); // Get date in user's timezone
 
       // Update local cache first
       const habits = await this.getLocalHabits();
       const updatedHabits = habits.map(h => {
         if (h.id === habitId) {
-          const newDates = h.completedDates.filter(d => d !== today);
+          const newDates = h.completedDates.filter(d => d !== todayLocal);
+          const newCurrentStreak = this.calculateCurrentStreak(newDates);
+          const newLongestStreak = Math.max(h.longestStreak || 0, newCurrentStreak);
           return {
             ...h,
             last_completed: newDates.length > 0 ? new Date(newDates[newDates.length - 1]).toISOString() : null,
             completedDates: newDates,
-            currentStreak: this.calculateCurrentStreak(newDates)
+            currentStreak: newCurrentStreak,
+            longestStreak: newLongestStreak,
+            streak: newCurrentStreak // Keep the streak field in sync
           };
         }
         return h;
       });
       await this.saveLocalHabits(updatedHabits);
 
-      // Then update Supabase
+      // Then update Supabase - using the local date for range
       const { error: completionError } = await supabase
         .from('habit_completions')
         .delete()
         .eq('habit_id', habitId)
-        .gte('completed_date', `${today}T00:00:00`)
-        .lt('completed_date', `${today}T23:59:59`);
+        .gte('completed_date', `${todayLocal}T00:00:00`)
+        .lt('completed_date', `${todayLocal}T23:59:59`);
 
       if (completionError) throw completionError;
 
-      // Update habit's last_completed in Supabase if needed
-      const habit = habits.find(h => h.id === habitId);
+      // Update habit's last_completed and streak in Supabase if needed
+      const habit = updatedHabits.find(h => h.id === habitId);
       if (habit) {
         const { error: habitError } = await supabase
           .from('habits')
-          .update({ last_completed: habit.last_completed })
+          .update({ 
+            last_completed: habit.last_completed,
+            streak: habit.currentStreak // Keep Supabase streak in sync
+          })
           .eq('id', habitId);
 
         if (habitError) throw habitError;
