@@ -54,7 +54,8 @@ export function KPICards({ habits }: KPICardsProps) {
 
   // Calculate longest streak
   const longestStreak = habits.reduce((acc, habit) => {
-    return Math.max(acc, habit.longestStreak || 0);
+    const streak = habit.streak || 0;
+    return Math.max(acc, streak);
   }, 0);
 
   // Calculate current streak if not provided
