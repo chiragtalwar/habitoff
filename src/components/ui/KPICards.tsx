@@ -9,12 +9,16 @@ export function KPICards({ habits }: KPICardsProps) {
   // Calculate current month streak and completion
   const today = new Date();
   const currentMonth = today.toLocaleString('default', { month: 'long' });
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-
-  // Calculate total possible completions considering frequency
+  
+  // Calculate total possible completions considering frequency and start date
   const totalPossibleCompletions = habits.reduce((acc: number, habit) => {
-    const daysForHabit = habit.frequency === 'daily' ? daysInMonth : 
-                        habit.frequency === 'weekly' ? Math.ceil(daysInMonth / 7) : 1;
+    const habitStartDate = new Date(habit.created_at);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const startDate = habitStartDate > startOfMonth ? habitStartDate : startOfMonth;
+    const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    const daysForHabit = habit.frequency === 'daily' ? daysSinceStart : 
+                        habit.frequency === 'weekly' ? Math.ceil(daysSinceStart / 7) : 1;
     return acc + daysForHabit;
   }, 0);
 
@@ -169,12 +173,12 @@ export function KPICards({ habits }: KPICardsProps) {
           <div className="mt-2">
             <div className="flex justify-between items-end mb-1">
               <div className="flex items-baseline">
-                <p className="text-habit-success text-5xl font-bold tracking-tight">{monthlyCompletions}</p>
-                <span className="text-white/50 text-lg ml-1">/{totalPossibleCompletions}</span>
+                <p className="text-habit-success text-5xl font-bold tracking-tight">{currentCompletion}</p>
+                <span className="text-white/50 text-lg ml-1">%</span>
               </div>
               <div className="flex flex-col items-end">
-                <span className="text-white/90 text-base font-medium leading-none">{currentCompletion}%</span>
-                <span className="text-white/50 text-[10px] leading-tight">completion</span>
+                <span className="text-white/90 text-base font-medium leading-none">{monthlyCompletions}/{totalPossibleCompletions}</span>
+                <span className="text-white/50 text-[10px] leading-tight">completions</span>
               </div>
             </div>
             <div className="flex items-center justify-between">

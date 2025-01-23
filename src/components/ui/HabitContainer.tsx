@@ -113,21 +113,9 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="group/streak relative p-2 rounded-lg bg-gradient-to-br from-habit-highlight/30 via-habit-highlight/20 to-habit-highlight/30
-                    transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-habit-highlight/20
-                    border border-habit-highlight/30 hover:border-habit-highlight/50">
-                    <div className="flex items-center gap-2 relative z-10">
-                      <span className="text-habit-highlight text-sm font-bold tracking-wide">{habit.currentStreak || 0}</span>
-                      <Flame 
-                        className={`w-4 h-4 transition-all duration-300 group-hover/streak:scale-110
-                          ${(habit.currentStreak || 0) > 0 
-                            ? 'text-habit-highlight' 
-                            : 'text-habit-highlight/40'}`}
-                      />
-                    </div>
-                    {(habit.currentStreak || 0) > 0 && (
-                      <span className="absolute inset-0 rounded-lg bg-gradient-to-r from-habit-highlight/10 to-transparent" />
-                    )}
+                  <div className="flex items-center gap-1 bg-[#2a1810] px-2 py-1 rounded-lg">
+                    <span className="text-orange-500 font-bold">{habit.streak}</span>
+                    <Flame className="w-4 h-4 text-orange-500" />
                   </div>
                   <div className="flex gap-1">
                     <button

@@ -32,8 +32,5 @@ archive.directory(join(__dirname, '../dist/'), false);
 // Add the manifest.json
 archive.file(join(__dirname, '../manifest.json'), { name: 'manifest.json' });
 
-// Add the icons
-archive.directory(join(__dirname, '../public/icons/'), 'icons');
-
 // Finalize the archive
 archive.finalize(); 
