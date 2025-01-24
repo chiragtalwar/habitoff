@@ -49,15 +49,44 @@ export const Timeline = ({ habits, timeRange }: TimelineProps) => {
         labels.push(isToday ? 'Today' : date.toLocaleDateString('default', { weekday: 'short' }));
       }
     } else if (timeRange === 'month') {
-      // Get current month's weeks
+      // Get current month's start and end
       const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-      const numWeeks = Math.ceil((today.getDate() + firstDay.getDay()) / 7);
-
-      for (let i = 0; i < numWeeks; i++) {
-        const weekStart = new Date(firstDay);
-        weekStart.setDate(1 + (i * 7));
-        dates.push(weekStart);
-        labels.push(`Week ${i + 1}`);
+      firstDay.setHours(0, 0, 0, 0);
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      lastDay.setHours(23, 59, 59, 999);
+      
+      let currentDate = new Date(firstDay);
+      let weekNumber = 1;
+      
+      // Generate weeks for the current month only
+      while (currentDate <= lastDay) {
+        const weekStart = new Date(currentDate);
+        weekStart.setHours(0, 0, 0, 0);
+        
+        // For first week, start from 1st of month
+        // For other weeks, start from Monday
+        if (weekNumber === 1) {
+          dates.push(weekStart);
+        } else {
+          const monday = new Date(currentDate);
+          monday.setDate(currentDate.getDate() - (currentDate.getDay() - 1));
+          monday.setHours(0, 0, 0, 0);
+          dates.push(monday);
+        }
+        
+        labels.push(`Week ${weekNumber}`);
+        
+        // Move to next week
+        if (weekNumber === 1) {
+          // First week: move to next Monday
+          currentDate.setDate(6); // Move to 6th (first Sunday)
+          currentDate.setDate(currentDate.getDate() + 1); // Move to Monday
+        } else {
+          currentDate.setDate(currentDate.getDate() + 7);
+        }
+        
+        if (currentDate > lastDay) break;
+        weekNumber++;
       }
     } else {
       // Year view - last 12 months
@@ -72,41 +101,171 @@ export const Timeline = ({ habits, timeRange }: TimelineProps) => {
   }, [timeRange]);
 
   const chartData = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const stats = timeRangeData.dates.map((date: Date, index: number) => {
       let totalPossibleCompletions = 0;
       let actualCompletions = 0;
 
-      habits.forEach(habit => {
-        const startOfPeriod = new Date(date);
-        const endOfPeriod = new Date(date);
-        
-        if (timeRange === 'week') {
-          // Single day
-          startOfPeriod.setHours(0, 0, 0, 0);
-          endOfPeriod.setHours(23, 59, 59, 999);
-          totalPossibleCompletions += 1;
-        } else if (timeRange === 'month') {
-          // Week period
-          endOfPeriod.setDate(endOfPeriod.getDate() + 6);
-          totalPossibleCompletions += 7;
-        } else {
-          // Month period
-          endOfPeriod.setMonth(endOfPeriod.getMonth() + 1);
-          endOfPeriod.setDate(0);
-          totalPossibleCompletions += endOfPeriod.getDate();
-        }
+      console.log(`Processing week ${index + 1}, starting ${date.toISOString()}`);
 
-        habit.completedDates.forEach((completionDate: string) => {
-          const completion = new Date(completionDate);
-          if (completion >= startOfPeriod && completion <= endOfPeriod) {
-            actualCompletions++;
+      // Calculate week end date first
+      const weekEnd = new Date(date);
+      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      monthEnd.setHours(23, 59, 59, 999);
+      
+      if (timeRange === 'month') {
+        // Set week boundaries
+        weekEnd.setDate(weekEnd.getDate() + 6); // Add 6 days to get to end of week
+        
+        // Ensure we don't go past month end
+        if (weekEnd > monthEnd) {
+          weekEnd.setTime(monthEnd.getTime());
+        }
+        
+        // Set time to end of day
+        weekEnd.setHours(23, 59, 59, 999);
+      }
+
+      if (timeRange === 'week') {
+        habits.forEach(habit => {
+          const habitStartDate = new Date(habit.created_at);
+          habitStartDate.setHours(0, 0, 0, 0);
+          
+          // Skip if the date is before habit start
+          if (date < habitStartDate) {
+            return;
+          }
+
+          // For daily habits, count 1 completion per habit if the date is today or before
+          if (habit.frequency === 'daily' && date <= today) {
+            totalPossibleCompletions += 1;
+          }
+          
+          // Count completions for this specific day only
+          const completionsForDay = habit.completedDates.filter(completionDate => {
+            const completion = new Date(completionDate);
+            completion.setHours(0, 0, 0, 0);
+            return completion.getTime() === date.getTime();
+          }).length;
+          
+          actualCompletions += completionsForDay;
+        });
+      } else if (timeRange === 'month') {
+        habits.forEach(habit => {
+          const habitStartDate = new Date(habit.created_at);
+          habitStartDate.setHours(0, 0, 0, 0);
+          
+          // Skip if the entire week is before habit start
+          if (weekEnd < habitStartDate) {
+            console.log(`Skipping week - ends before habit start date ${habitStartDate.toISOString()}`);
+            return;
+          }
+
+          // Only count days from habit start to week end
+          const effectiveStart = habitStartDate > date ? habitStartDate : date;
+          const effectiveEnd = weekEnd > today ? today : weekEnd;
+          
+          // Normalize dates to start of day for comparison
+          const normalizedStart = new Date(effectiveStart);
+          const normalizedEnd = new Date(weekEnd); // Use weekEnd instead of effectiveEnd
+          normalizedStart.setHours(0, 0, 0, 0);
+          normalizedEnd.setHours(23, 59, 59, 999);
+          
+          console.log(`Week ${index + 1} bounds:`, {
+            weekStart: date.toISOString(),
+            weekEnd: weekEnd.toISOString(),
+            effectiveStart: normalizedStart.toISOString(),
+            effectiveEnd: normalizedEnd.toISOString(),
+            habitStartDate: habitStartDate.toISOString()
+          });
+
+          if (normalizedEnd >= normalizedStart) {
+            // Calculate days from habit start to week end
+            const daysInPeriod = Math.floor((normalizedEnd.getTime() - normalizedStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            
+            if (habit.frequency === 'daily') {
+              totalPossibleCompletions += daysInPeriod;
+            }
+            
+            // Only count completions up to today
+            const completionsInWeek = habit.completedDates.filter(completionDate => {
+              const completion = new Date(completionDate);
+              completion.setHours(0, 0, 0, 0);
+              return completion.getTime() >= normalizedStart.getTime() && completion.getTime() <= effectiveEnd.getTime();
+            }).length;
+            
+            actualCompletions += completionsInWeek;
+
+            console.log(`Week ${index + 1} calculations:`, {
+              daysInPeriod,
+              totalPossibleCompletions,
+              completionsInWeek,
+              actualCompletions,
+              habitStartDate: habitStartDate.toISOString()
+            });
           }
         });
-      });
+      } else if (timeRange === 'year') {
+        habits.forEach(habit => {
+          const habitStartDate = new Date(habit.created_at);
+          habitStartDate.setHours(0, 0, 0, 0);
+          
+          // Get the month's start and end dates
+          const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+          const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+          monthEnd.setHours(23, 59, 59, 999);
+          
+          // Skip if the entire month is before habit start
+          if (monthEnd < habitStartDate) {
+            return;
+          }
+
+          // Only count days from habit start to month end
+          const effectiveStart = habitStartDate > monthStart ? habitStartDate : monthStart;
+          const effectiveEnd = monthEnd > today ? today : monthEnd;
+          
+          // Skip future months
+          if (monthStart > today) {
+            return;
+          }
+
+          if (effectiveEnd >= effectiveStart) {
+            const daysInPeriod = Math.floor((effectiveEnd.getTime() - effectiveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            
+            if (habit.frequency === 'daily') {
+              // For daily habits, count remaining days in the month
+              const daysRemaining = Math.floor((monthEnd.getTime() - effectiveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+              totalPossibleCompletions += daysRemaining;
+            } else if (habit.frequency === 'weekly') {
+              // For weekly habits, count remaining weeks
+              totalPossibleCompletions += Math.ceil(daysInPeriod / 7);
+            } else if (habit.frequency === 'monthly') {
+              // For monthly habits, count as 1 if we're past the 15th
+              totalPossibleCompletions += 1;
+            }
+            
+            // Count completions for this month
+            const completionsInMonth = habit.completedDates.filter(completionDate => {
+              const completion = new Date(completionDate);
+              completion.setHours(0, 0, 0, 0);
+              return completion >= effectiveStart && completion <= effectiveEnd;
+            }).length;
+            
+            actualCompletions += completionsInMonth;
+          }
+        });
+      }
 
       const percentage = totalPossibleCompletions > 0 
         ? Math.round((actualCompletions / totalPossibleCompletions) * 100)
         : 0;
+
+      console.log(`Final percentage for ${timeRangeData.labels[index]}: ${percentage}%`, {
+        totalPossibleCompletions,
+        actualCompletions
+      });
 
       return {
         label: timeRangeData.labels[index],
@@ -114,6 +273,8 @@ export const Timeline = ({ habits, timeRange }: TimelineProps) => {
         isToday: timeRange === 'week' && timeRangeData.labels[index].includes('Today')
       } as ChartDataPoint;
     });
+
+    console.log('Final chart data:', stats);
 
     return stats;
   }, [habits, timeRange, timeRangeData]);
@@ -149,6 +310,7 @@ export const Timeline = ({ habits, timeRange }: TimelineProps) => {
           <YAxis 
             hide={true}
             domain={[0, 100]}
+            tickFormatter={(value: number) => `${value}%`}
           />
           <Tooltip 
             content={(props: any) => {
@@ -159,7 +321,7 @@ export const Timeline = ({ habits, timeRange }: TimelineProps) => {
                   <div className="rounded-lg border border-emerald-800/50 bg-green-950/90 px-3 py-2 shadow-xl">
                     <div className="text-[10px] font-medium text-emerald-400 flex flex-col items-center gap-1">
                       <span>{getEmoji(percentage)}</span>
-                      <span>{percentage}%</span>
+                      <span>{percentage}% completed</span>
                     </div>
                   </div>
                 );
@@ -182,6 +344,8 @@ export const Timeline = ({ habits, timeRange }: TimelineProps) => {
             }}
             dot={(props: DotProps) => {
               const { cx, cy, payload } = props;
+              // Return an empty group if coordinates are missing
+              if (!cx || !cy) return <g />;
               return (
                 <circle
                   cx={cx}
@@ -195,7 +359,8 @@ export const Timeline = ({ habits, timeRange }: TimelineProps) => {
             activeDot={{
               r: 6,
               fill: "rgb(16 185 129)",
-              strokeWidth: 0
+              stroke: "rgb(16 185 129 / 0.3)",
+              strokeWidth: 4
             }}
           />
         </LineChart>

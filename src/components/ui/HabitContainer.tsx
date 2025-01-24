@@ -110,19 +110,21 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
                   <div className="flex flex-col items-start">
                     <h3 className="text-white font-semibold text-base">{habit.title}</h3>
                     <div className="flex items-center gap-2">
-                      <p className="text-emerald-400/90 text-xs font-medium">{currentWeekProgress}/7 days</p>
-                      {progressDiff !== 0 && lastWeekProgress > 0 && (
-                        <span className={`text-xs ${progressDiff > 0 ? 'text-emerald-400/90' : 'text-orange-400/90'}`}>
-                          ({progressDiff > 0 ? '+' : ''}{progressDiff} vs last week)
-                        </span>
-                      )}
+                      <p className="text-emerald-400/90 text-xs font-medium">
+                        {currentWeekProgress}/7 days
+                        {progressDiff !== 0 && (
+                          <span className={`ml-1 ${progressDiff > 0 ? 'text-emerald-400/90' : 'text-orange-400/90'}`}>
+                            ({progressDiff > 0 ? '+' : ''}{progressDiff} vs last week)
+                          </span>
+                        )}
+                      </p>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-[#2a1810] px-2 py-1 rounded-lg">
-                    <span className="text-orange-500 font-bold">{habit.streak}</span>
-                    <Flame className="w-4 h-4 text-orange-500" />
+                  <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-900/90 to-amber-800/90 px-2.5 py-1.5 rounded-lg border border-amber-500/20 shadow-lg">
+                    <span className="text-amber-400 font-bold">{habit.streak}</span>
+                    <Flame className="w-4 h-4 text-amber-400" />
                   </div>
                   <div className="flex gap-1">
                     <button

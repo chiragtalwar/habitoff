@@ -25,59 +25,85 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
   // Calculate stats for circular progress
   const calculateStats = () => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get start of periods
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
+    startOfWeek.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Monday
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
+
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
     const startOfYear = new Date(today.getFullYear(), 0, 1);
+    const endOfYear = new Date(today.getFullYear(), 11, 31);
 
-    // Previous periods
-    const lastWeekStart = new Date(startOfWeek);
-    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const lastYearStart = new Date(today.getFullYear() - 1, 0, 1);
-
+    // Calculate required completions for each period
     const stats = habits.reduce((acc, habit) => {
-      const completedDates = habit.completedDates.map(date => new Date(date));
-      
-      // Current periods
-      const weeklyCount = completedDates.filter(date => date >= startOfWeek && date <= today).length;
-      const monthlyCount = completedDates.filter(date => date >= startOfMonth && date <= today).length;
-      const yearlyCount = completedDates.filter(date => date >= startOfYear && date <= today).length;
+      const habitStartDate = new Date(habit.created_at);
+      habitStartDate.setHours(0, 0, 0, 0);
 
-      // Previous periods
-      const lastWeekCount = completedDates.filter(date => date >= lastWeekStart && date < startOfWeek).length;
-      const lastMonthCount = completedDates.filter(date => date >= lastMonthStart && date < startOfMonth).length;
-      const lastYearCount = completedDates.filter(date => date >= lastYearStart && date < startOfYear).length;
+      // Weekly calculations - count from habit start to end of week
+      const daysRemainingInWeek = Math.floor((endOfWeek.getTime() - habitStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const weeklyRequired = habit.frequency === 'daily' ? daysRemainingInWeek : 
+                           habit.frequency === 'weekly' ? Math.ceil(daysRemainingInWeek / 7) : 0;
+
+      // Monthly calculations - count from habit start to end of month
+      const daysRemainingInMonth = Math.floor((endOfMonth.getTime() - habitStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const monthlyRequired = habit.frequency === 'daily' ? daysRemainingInMonth :
+                            habit.frequency === 'weekly' ? Math.ceil(daysRemainingInMonth / 7) : 1;
+
+      // Yearly calculations - count from habit start to end of year
+      const daysRemainingInYear = Math.floor((endOfYear.getTime() - habitStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const yearlyRequired = habit.frequency === 'daily' ? daysRemainingInYear :
+                           habit.frequency === 'weekly' ? Math.ceil(daysRemainingInYear / 7) : 12;
+
+      // Count actual completions
+      const completedDates = habit.completedDates.map(date => {
+        const completionDate = new Date(date);
+        completionDate.setHours(0, 0, 0, 0);
+        return completionDate;
+      });
+
+      // Count completions for each period
+      const weeklyCount = completedDates.filter(date => 
+        date >= habitStartDate && date <= today && date >= startOfWeek
+      ).length;
+
+      const monthlyCount = completedDates.filter(date => 
+        date >= habitStartDate && date <= today && date >= startOfMonth
+      ).length;
+
+      const yearlyCount = completedDates.filter(date => 
+        date >= habitStartDate && date <= today && date >= startOfYear
+      ).length;
 
       return {
         weekly: acc.weekly + weeklyCount,
         monthly: acc.monthly + monthlyCount,
         yearly: acc.yearly + yearlyCount,
-        lastWeek: acc.lastWeek + lastWeekCount,
-        lastMonth: acc.lastMonth + lastMonthCount,
-        lastYear: acc.lastYear + lastYearCount
+        weeklyRequired: acc.weeklyRequired + weeklyRequired,
+        monthlyRequired: acc.monthlyRequired + monthlyRequired,
+        yearlyRequired: acc.yearlyRequired + yearlyRequired
       };
     }, {
       weekly: 0,
       monthly: 0,
       yearly: 0,
-      lastWeek: 0,
-      lastMonth: 0,
-      lastYear: 0
+      weeklyRequired: 0,
+      monthlyRequired: 0,
+      yearlyRequired: 0
     });
 
-    const getDiff = (current: number, previous: number) => {
-      if (previous === 0) return current > 0 ? 100 : 0;
-      return Math.round(((current - previous) / previous) * 100);
-    };
-
+    // Calculate percentages
     return {
-      weekly: Math.round((stats.weekly / (habits.length * 7)) * 100),
-      monthly: Math.round((stats.monthly / (habits.length * 30)) * 100),
-      yearly: Math.round((stats.yearly / (habits.length * 365)) * 100),
-      weeklyDiff: getDiff(stats.weekly, stats.lastWeek),
-      monthlyDiff: getDiff(stats.monthly, stats.lastMonth),
-      yearlyDiff: getDiff(stats.yearly, stats.lastYear)
+      weekly: stats.weeklyRequired > 0 ? Math.round((stats.weekly / stats.weeklyRequired) * 100) : 0,
+      monthly: stats.monthlyRequired > 0 ? Math.round((stats.monthly / stats.monthlyRequired) * 100) : 0,
+      yearly: stats.yearlyRequired > 0 ? Math.round((stats.yearly / stats.yearlyRequired) * 100) : 0,
+      weeklyDiff: 100, // First week, so 100% improvement
+      monthlyDiff: 100, // First month, so 100% improvement
+      yearlyDiff: 100  // First year, so 100% improvement
     };
   };
 
@@ -141,13 +167,28 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
     date.setMonth(date.getMonth() + monthOffset);
     const year = date.getFullYear();
     const month = date.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    
+    // Get first day and last day of month
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    
+    // Get day of week for first day (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    const firstDayOfWeek = firstDay.getDay();
+    
+    // Calculate empty cells before the 1st
+    // If first day is Sunday (0), we need 6 empty cells
+    // If first day is Monday (1), we need 0 empty cells
+    // If first day is Tuesday (2), we need 1 empty cell
+    // etc.
+    const emptyCellsAtStart = (firstDayOfWeek + 6) % 7;
     
     const days = [];
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      days.push(null); // Empty cells for days before the 1st
+    // Add empty cells for days before the 1st
+    for (let i = 0; i < emptyCellsAtStart; i++) {
+      days.push(null);
     }
+    // Add actual days of the month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(i);
     }
@@ -237,26 +278,28 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
       {/* Monthly Calendar */}
       <div className="rounded-xl bg-[#0F4435] p-2.5">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handlePrevMonth}
-              className="p-0.5 rounded-lg bg-white/5 text-white/30 hover:bg-emerald-500/20 hover:text-emerald-300 
-                transition-all duration-200 transform hover:scale-105 active:scale-95"
-            >
-              <ChevronLeft className="w-3 h-3" />
-            </button>
-            <h2 className="text-sm font-medium text-white">{getCurrentMonth()}</h2>
-            <button
-              onClick={handleNextMonth}
-              disabled={monthOffset >= 0}
-              className={`p-0.5 rounded-lg bg-white/5 text-white/30
-                transition-all duration-200 transform hover:scale-105 active:scale-95
-                ${monthOffset >= 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-emerald-500/20 hover:text-emerald-300'}`}
-            >
-              <ChevronRight className="w-3 h-3" />
-            </button>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 ml-1">
+              <button
+                onClick={handlePrevMonth}
+                className="p-0.5 rounded-lg bg-white/5 text-white/30 hover:bg-emerald-500/20 hover:text-emerald-300 
+                  transition-all duration-200 transform hover:scale-105 active:scale-95 flex-shrink-0"
+              >
+                <ChevronLeft className="w-3 h-3" />
+              </button>
+              <h2 className="text-sm font-medium text-white whitespace-nowrap">{getCurrentMonth()}</h2>
+              <button
+                onClick={handleNextMonth}
+                disabled={monthOffset >= 0}
+                className={`p-0.5 rounded-lg bg-white/5 text-white/30
+                  transition-all duration-200 transform hover:scale-105 active:scale-95 flex-shrink-0
+                  ${monthOffset >= 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-emerald-500/20 hover:text-emerald-300'}`}
+              >
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
             {currentHabit && (
-              <div className="text-xs text-emerald-400/90 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+              <div className="text-xs text-emerald-400/90 bg-emerald-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0 min-w-[42px] text-center">
                 {(() => {
                   const currentDate = new Date();
                   currentDate.setMonth(currentDate.getMonth() + monthOffset);
@@ -276,19 +319,21 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 ml-3 flex-shrink-0 w-[120px]">
             <button
               onClick={prevHabit}
-              className="w-4 h-4 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center"
+              className="w-5 h-5 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center flex-shrink-0"
             >
-              <ArrowLeft className="w-2.5 h-2.5" />
+              <ArrowLeft className="w-3 h-3" />
             </button>
-            <span className="text-xs text-white/60 bg-[#0B3B2D] px-1.5 py-0.5 rounded-full">{currentHabit?.title || 'No habits'}</span>
+            <span className="text-xs text-white/60 bg-[#0B3B2D] px-1.5 py-0.5 rounded-full flex-1 truncate text-center">
+              {currentHabit?.title || 'No habits'}
+            </span>
             <button
               onClick={nextHabit}
-              className="w-4 h-4 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center"
+              className="w-5 h-5 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center flex-shrink-0"
             >
-              <ArrowRight className="w-2.5 h-2.5" />
+              <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>

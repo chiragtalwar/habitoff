@@ -10,21 +10,51 @@ export function KPICards({ habits }: KPICardsProps) {
   const today = new Date();
   const currentMonth = today.toLocaleString('default', { month: 'long' });
   
+  // Get start and end of current month
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  
   // Calculate total possible completions considering frequency and start date
   const totalPossibleCompletions = habits.reduce((acc: number, habit) => {
     const habitStartDate = new Date(habit.created_at);
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const startDate = habitStartDate > startOfMonth ? habitStartDate : startOfMonth;
-    const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const effectiveStartDate = habitStartDate > startOfMonth ? habitStartDate : startOfMonth;
     
-    const daysForHabit = habit.frequency === 'daily' ? daysSinceStart : 
-                        habit.frequency === 'weekly' ? Math.ceil(daysSinceStart / 7) : 1;
-    return acc + daysForHabit;
+    // Always use end of month for monthly progress
+    const daysInMonth = Math.floor((endOfMonth.getTime() - effectiveStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    let requiredCompletions = 0;
+    switch (habit.frequency) {
+      case 'daily':
+        // For daily habits, count from today to end of month
+        today.setHours(0, 0, 0, 0);
+        const daysRemaining = Math.floor((endOfMonth.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        requiredCompletions = daysRemaining;
+        break;
+      
+      case 'weekly':
+        // For weekly habits, count remaining full weeks in month
+        requiredCompletions = Math.ceil(daysInMonth / 7);
+        break;
+      
+      case 'monthly':
+        // For monthly habits, need 1 completion
+        requiredCompletions = 1;
+        break;
+    }
+    
+    return acc + requiredCompletions;
   }, 0);
 
-  // Calculate monthly completions
+  // Calculate actual completions this month
   const monthlyCompletions = habits.reduce((acc: number, habit) => {
-    return acc + (habit.completedDates?.length || 0);
+    const completionsThisMonth = habit.completedDates.filter(date => {
+      const completionDate = new Date(date);
+      completionDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return completionDate.getTime() === today.getTime();
+    }).length;
+    return acc + completionsThisMonth;
   }, 0);
 
   const currentCompletion = totalPossibleCompletions > 0 
@@ -162,8 +192,9 @@ export function KPICards({ habits }: KPICardsProps) {
         <div className="relative">
           <div className="flex justify-between items-start">
             <div className="space-y-0.5">
-              <h3 className="text-white/90 text-sm font-medium tracking-wide">Current Progress</h3>
-              <p className="text-habit-success/80 text-xs font-medium">{currentMonth}</p>
+              <h3 className="text-white/90 text-sm font-medium tracking-wide">
+                <span className="font-bold">{currentMonth}</span> Progress
+              </h3>
             </div>
             <div className="bg-habit-success/20 p-2 rounded-full">
               <Star className="w-5 h-5 text-habit-success group-hover:animate-glow" />
