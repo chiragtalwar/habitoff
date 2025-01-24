@@ -137,9 +137,10 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
 
   // Get the current month's calendar
   const getMonthCalendar = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
+    const date = new Date();
+    date.setMonth(date.getMonth() + monthOffset);
+    const year = date.getFullYear();
+    const month = date.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     
@@ -182,14 +183,6 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
         <div className="grid grid-cols-3 gap-1.5">
           <div className="rounded-lg bg-[#0B3B2D] p-1.5">
             <CircularProgress 
-              value={habitStats.yearly} 
-              label="This Year" 
-              color="#4ade80"
-              diff={habitStats.yearlyDiff}
-            />
-          </div>
-          <div className="rounded-lg bg-[#0B3B2D] p-1.5">
-            <CircularProgress 
               value={habitStats.weekly} 
               label="This Week" 
               color="#4ade80"
@@ -202,6 +195,14 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               label="This Month" 
               color="#4ade80"
               diff={habitStats.monthlyDiff}
+            />
+          </div>
+          <div className="rounded-lg bg-[#0B3B2D] p-1.5">
+            <CircularProgress 
+              value={habitStats.yearly} 
+              label="This Year" 
+              color="#4ade80"
+              diff={habitStats.yearlyDiff}
             />
           </div>
         </div>
@@ -302,7 +303,9 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               return <div key={`empty-${index}`} className="aspect-square" />;
             }
 
-            const date = new Date(today.getFullYear(), today.getMonth(), day);
+            const currentDate = new Date();
+            currentDate.setMonth(currentDate.getMonth() + monthOffset);
+            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
             const isCompleted = currentHabit?.completedDates.some(completedDate => {
               const [completedYear, completedMonth, completedDay] = completedDate.split('-').map(Number);
               return completedYear === date.getFullYear() && 

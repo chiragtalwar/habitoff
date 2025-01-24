@@ -55,14 +55,21 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
   const getWeeklyProgress = (habit: HabitWithCompletedDates, forLastWeek = false) => {
     const today = new Date();
     const startDate = new Date(today);
+    
+    // Adjust for weekOffset
+    startDate.setDate(startDate.getDate() + (weekOffset * 7));
     if (forLastWeek) {
-      startDate.setDate(today.getDate() - 7);
+      startDate.setDate(startDate.getDate() - 7);
     }
+    
+    // Get the Monday of the week
     const weekStart = new Date(startDate);
-    weekStart.setDate(startDate.getDate() - startDate.getDay());
+    weekStart.setDate(startDate.getDate() - (startDate.getDay() === 0 ? 6 : startDate.getDay() - 1));
+    weekStart.setHours(0, 0, 0, 0);
     
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
 
     const completions = habit.completedDates.filter(date => {
       const completionDate = new Date(date);
@@ -104,7 +111,7 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
                     <h3 className="text-white font-semibold text-base">{habit.title}</h3>
                     <div className="flex items-center gap-2">
                       <p className="text-emerald-400/90 text-xs font-medium">{currentWeekProgress}/7 days</p>
-                      {progressDiff !== 0 && (
+                      {progressDiff !== 0 && lastWeekProgress > 0 && (
                         <span className={`text-xs ${progressDiff > 0 ? 'text-emerald-400/90' : 'text-orange-400/90'}`}>
                           ({progressDiff > 0 ? '+' : ''}{progressDiff} vs last week)
                         </span>
