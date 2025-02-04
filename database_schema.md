@@ -216,3 +216,34 @@ Applied to: public role.
 
 UPDATE: Enable update for users based on id.
 Applied to: public role.
+
+---
+
+### 4. **payment_history**
+The payment_history table stores records of payments made by users. Here are its key attributes:
+
+
+id: A unique identifier for each payment record (UUID).
+user_id: A reference to the user who made the payment (UUID).
+subscription_id: A reference to the subscription associated with the payment (UUID).
+amount: The amount of the payment (numeric).
+currency: The currency in which the payment was made (text).
+status: The status of the payment (text), which can be 'succeeded', 'failed', or 'pending'.
+dodo_payment_id: An identifier for the payment in the Dodo payment system (text).
+created_at: The timestamp when the payment record was created (timestamp with time zone).
+The table has foreign key constraints linking user_id to the auth.users table and subscription_id to the subscriptions table. It also includes indexes on user_id and subscription_id for performance optimization.
+
+### 5. **subscriptions**
+The subscriptions table keeps track of user subscriptions. Here are its key attributes:
+
+
+
+id: A unique identifier for each subscription record (UUID).
+user_id: A reference to the user who owns the subscription (UUID).
+dodo_subscription_id: An identifier for the subscription in the Dodo system (text).
+status: The current status of the subscription (text), which can be 'trialing', 'active', 'canceled', or 'past_due'.
+plan_type: The type of subscription plan (text), which can be 'free' or 'premium'.
+trial_end: The timestamp indicating when the trial period ends (timestamp with time zone).
+current_period_end: The timestamp indicating when the current subscription period ends (timestamp with time zone).
+created_at: The timestamp when the subscription record was created (timestamp with time zone).
+updated_at: The timestamp when the subscription record was last updated (timestamp with time zone).

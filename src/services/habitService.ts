@@ -250,6 +250,59 @@ export const habitService = {
         console.error('Error inserting habit to Supabase:', insertError);
         throw insertError;
       }
+
+      // Check if this is the user's first habit
+      const { data: firstHabits, error: habitsError } = await supabase
+        .from('habits')
+        .select('created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+        .limit(2);
+
+      if (habitsError) {
+        console.error('Error checking habits:', habitsError);
+        return;
+      }
+
+      // If this is the first habit (only one habit exists and it's the one we just created)
+      // Convert both dates to the same format for comparison
+      const habitDate = new Date(firstHabits[0]?.created_at || '').toISOString().split('T')[0];
+      const nowDate = new Date(now).toISOString().split('T')[0];
+      
+      if (firstHabits.length === 1 && habitDate === nowDate) {
+        const trialEnd = new Date();
+        trialEnd.setDate(trialEnd.getDate() + 60); // 60 days trial
+
+        // Get current subscription if exists
+        const { data: currentSub } = await supabase
+          .from('subscriptions')
+          .select('status')
+          .eq('user_id', userId)
+          .single();
+
+        // Only create trial if user isn't already on an active subscription
+        if (!currentSub || (currentSub.status !== 'active' && currentSub.status !== 'trialing')) {
+          const { error: subscriptionError } = await supabase
+            .from('subscriptions')
+            .upsert({
+              user_id: userId,
+              status: 'trialing',
+              plan_type: 'premium',
+              trial_end: trialEnd.toISOString(),
+              current_period_end: trialEnd.toISOString(),
+              created_at: now,
+              updated_at: now
+            }, {
+              onConflict: 'user_id'
+            });
+
+          if (subscriptionError) {
+            console.error('Error creating trial subscription:', subscriptionError);
+          } else {
+            console.log('Trial subscription created successfully for first habit');
+          }
+        }
+      }
     } catch (error) {
       console.error('Error adding habit:', error);
       throw error;

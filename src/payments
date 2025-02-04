@@ -1,0 +1,215 @@
+Payments
+
+# Habito - Dodo Payments Integration Guide
+
+## Overview
+Habito uses Dodo Payments for handling premium subscriptions. The integration includes:
+1. Trial management through Supabase
+2. Payment processing through Dodo Payments
+3. Webhook handling for subscription events
+
+## 1. Environment Setup
+
+```typescript
+// Add to .env.local
+VITE_DODO_PAYMENTS_API_KEY=your_api_key
+VITE_DODO_WEBHOOK_SECRET=your_webhook_secret
+VITE_DODO_PREMIUM_PRODUCT_ID=your_product_id
+```
+
+## 2. Database Schema (Supabase)
+
+```sql
+-- subscriptions table
+create table public.subscriptions (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users(id) on delete cascade,
+  dodo_subscription_id text,
+  status text check (status in ('free', 'trialing', 'active', 'expired', 'canceled')),
+  plan_type text check (plan_type in ('free', 'premium')),
+  trial_end timestamp with time zone,
+  current_period_end timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- RLS Policies
+alter table public.subscriptions enable row level security;
+
+create policy "Users can view own subscriptions"
+  on public.subscriptions for select
+  using (auth.uid() = user_id);
+
+create policy "Users can update own subscriptions"
+  on public.subscriptions for update
+  using (auth.uid() = user_id);
+```
+
+## 3. Implementation Steps
+
+### 3.1 Dodo Payments Client (`src/lib/dodoPayments.ts`)
+
+```typescript
+import { DodoPaymentsClient } from '@dodopayments/node';
+
+const dodoClient = new DodoPaymentsClient({
+  apiKey: import.meta.env.VITE_DODO_PAYMENTS_API_KEY,
+  isTest: process.env.NODE_ENV !== 'production'
+});
+
+export const createCheckoutSession = async (userId: string, email: string) => {
+  return dodoClient.checkout.create({
+    productId: import.meta.env.VITE_DODO_PREMIUM_PRODUCT_ID,
+    customerEmail: email,
+    metadata: {
+      userId
+    },
+    successUrl: chrome.runtime.getURL('success.html'),
+    cancelUrl: chrome.runtime.getURL('canceled.html')
+  });
+};
+
+export const cancelSubscription = async (dodoSubscriptionId: string) => {
+  return dodoClient.subscriptions.cancel(dodoSubscriptionId);
+};
+```
+
+### 3.2 Webhook Handler (`src/pages/api/webhooks/dodo.ts`)
+
+```typescript
+import { Webhook } from '@dodopayments/webhooks';
+import { supabase } from '@/lib/supabase';
+
+const webhook = new Webhook(process.env.VITE_DODO_WEBHOOK_SECRET!);
+
+export async function handleWebhook(request: Request) {
+  const payload = await webhook.verify(request);
+
+  switch (payload.type) {
+    case 'subscription.created':
+      await handleSubscriptionCreated(payload);
+      break;
+    case 'subscription.updated':
+      await handleSubscriptionUpdated(payload);
+      break;
+    case 'subscription.canceled':
+      await handleSubscriptionCanceled(payload);
+      break;
+  }
+}
+
+async function handleSubscriptionCreated(payload: any) {
+  const { userId } = payload.metadata;
+  await supabase.from('subscriptions').upsert({
+    user_id: userId,
+    dodo_subscription_id: payload.id,
+    status: 'active',
+    plan_type: 'premium',
+    current_period_end: new Date(payload.current_period_end),
+    updated_at: new Date()
+  });
+}
+```
+
+### 3.3 Subscription Service Updates (`src/lib/subscription.ts`)
+
+```typescript
+import { createCheckoutSession, cancelSubscription } from './dodoPayments';
+
+export async function upgradeSubscription(userId: string, email: string) {
+  // Create checkout session
+  const session = await createCheckoutSession(userId, email);
+  return session.url;
+}
+
+export async function cancelUserSubscription(userId: string) {
+  // Get Dodo subscription ID
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('dodo_subscription_id')
+    .eq('user_id', userId)
+    .single();
+
+  if (subscription?.dodo_subscription_id) {
+    await cancelSubscription(subscription.dodo_subscription_id);
+  }
+
+  // Update local subscription status
+  await supabase
+    .from('subscriptions')
+    .update({
+      status: 'canceled',
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', userId);
+}
+```
+
+## 4. Testing Flow
+
+1. **Trial Period**:
+   - New user creates first habit
+   - System creates trial subscription record
+   - User has 60 days of premium features
+
+2. **Premium Upgrade**:
+   - User clicks upgrade button
+   - System creates Dodo checkout session
+   - User completes payment
+   - Webhook updates subscription status
+
+3. **Subscription Management**:
+   - User can view subscription status
+   - Cancel subscription if needed
+   - System handles trial expiration
+
+## 5. Security Considerations
+
+1. Store API keys securely in environment variables
+2. Verify webhook signatures
+3. Implement proper RLS policies
+4. Sanitize and validate all user inputs
+5. Handle errors gracefully
+
+## 6. Error Handling
+
+```typescript
+try {
+  // Payment operations
+} catch (error) {
+  if (error instanceof DodoPaymentsError) {
+    switch (error.code) {
+      case 'subscription_not_found':
+        // Handle missing subscription
+        break;
+      case 'payment_failed':
+        // Handle failed payment
+        break;
+      default:
+        // Handle other errors
+    }
+  }
+  // Log error to monitoring service
+}
+```
+
+## 7. Monitoring and Analytics
+
+1. Log all payment events
+2. Track subscription metrics
+3. Monitor webhook delivery
+4. Set up alerts for failed payments
+
+## 8. User Experience
+
+1. Clear pricing display
+2. Smooth upgrade flow
+3. Transparent trial status
+4. Easy subscription management
+
+## Next Steps:
+1. Set up Dodo Payments account
+2. Configure webhook endpoints
+3. Test payment flow in staging
+4. Monitor error rates
+5. Track conversion metrics
