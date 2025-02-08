@@ -83,8 +83,8 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
     return completions;
   };
 
-  // Use enhanced view for 3 or more habits
-  if (habits.length >= 3) {
+  // Use enhanced view for 4 or more habits
+  if (habits.length >= 4) {
     return (
       <>
         <FallingLeaves 
@@ -100,7 +100,7 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
     );
   }
 
-  // Original garden view for fewer than 3 habits
+  // Original garden view for 3 or fewer habits
   return (
     <>
       <FallingLeaves 

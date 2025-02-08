@@ -115,17 +115,11 @@ export function AddHabitDialog({ open, onOpenChange, onSubmit }: AddHabitDialogP
   const [description, setDescription] = useState("");
   const [frequency, setFrequency] = useState<HabitFrequency>('daily');
   const [animalType, setAnimalType] = useState<AnimalType>('lion');
-  const [selectedAnimal, setSelectedAnimal] = useState(ANIMAL_COMPANIONS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showEvolution, setShowEvolution] = useState(false);
 
   const handleAnimalSelect = (animal: typeof ANIMAL_COMPANIONS[number]) => {
     setAnimalType(animal.type);
-    setSelectedAnimal(animal);
-    setShowEvolution(true);
-    // Hide evolution preview after 3 seconds
-    setTimeout(() => setShowEvolution(false), 3000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -154,18 +148,17 @@ export function AddHabitDialog({ open, onOpenChange, onSubmit }: AddHabitDialogP
     setDescription("");
     setFrequency('daily');
     setAnimalType('lion');
-    setSelectedAnimal(ANIMAL_COMPANIONS[0]);
     setError(null);
-    setShowEvolution(false);
   };
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl w-full max-w-md p-6 shadow-xl">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-serif text-white">New Habit</h2>
+      <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl w-full max-w-md shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <h2 className="text-xl font-serif text-white">New Habit</h2>
           <button
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
@@ -175,119 +168,105 @@ export function AddHabitDialog({ open, onOpenChange, onSubmit }: AddHabitDialogP
           </button>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
-            {error}
-          </div>
-        )}
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm text-white/60 block">Title</label>
+          {/* Basic Info */}
+          <div className="space-y-4">
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-habit-green-from"
-              placeholder="e.g., Morning Meditation"
+              className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-habit-green-from"
+              placeholder="Habit name (e.g., Morning Meditation)"
               required
             />
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm text-white/60 block">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-habit-green-from resize-none"
-              placeholder="What's your goal?"
-              rows={3}
+              className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-habit-green-from resize-none"
+              placeholder="What's your goal? (optional)"
+              rows={2}
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm text-white/60 block">Frequency</label>
-            <div className="grid grid-cols-3 gap-2">
-              {FREQUENCIES.map((freq) => (
-                <button
-                  key={freq.value}
-                  type="button"
-                  onClick={() => setFrequency(freq.value)}
-                  className={`px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                    frequency === freq.value
-                      ? 'bg-habit-green-from text-white'
-                      : 'bg-black/20 text-white/60 hover:bg-black/30'
+          {/* Frequency */}
+          <div className="grid grid-cols-3 gap-2">
+            {FREQUENCIES.map((freq) => (
+              <button
+                key={freq.value}
+                type="button"
+                onClick={() => setFrequency(freq.value)}
+                className={`px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                  frequency === freq.value
+                    ? 'bg-habit-green-from text-white'
+                    : 'bg-black/20 text-white/60 hover:bg-black/30'
+                }`}
+              >
+                {freq.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Animal Selection with Evolution Preview */}
+          <div className="grid grid-cols-3 gap-3">
+            {ANIMAL_COMPANIONS.map((animal) => (
+              <button
+                key={animal.type}
+                type="button"
+                onClick={() => handleAnimalSelect(animal)}
+                className={`relative group p-2 rounded-lg transition-all duration-200
+                  ${animalType === animal.type
+                    ? 'bg-habit-green-from ring-2 ring-habit-green-to'
+                    : 'bg-black/20 hover:bg-black/30'
                   }`}
-                >
-                  {freq.label}
-                </button>
-              ))}
-            </div>
+              >
+                {/* Evolution Preview on Hover */}
+                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 rounded-lg 
+                  bg-black/90 border border-white/10 shadow-xl transition-all duration-200
+                  opacity-0 group-hover:opacity-100 pointer-events-none z-10`}>
+                  <div className="grid grid-cols-3 gap-1">
+                    {(['baby', 'growing', 'achieved'] as const).map((stage) => (
+                      <div key={stage} className="text-center">
+                        <img 
+                          src={animal.stages[stage].image}
+                          alt={animal.stages[stage].name}
+                          className="w-12 h-12 object-cover rounded-md mx-auto"
+                        />
+                        <p className="text-white/90 text-[10px] mt-1">
+                          {stage}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Main Animal Display */}
+                <div className="aspect-square relative mb-1">
+                  <img 
+                    src={animal.stages.baby.image}
+                    alt={animal.name}
+                    className="w-full h-full object-cover rounded-md"
+                  />
+                </div>
+                <p className="text-white/90 text-xs font-medium text-center">
+                  {animal.name}
+                </p>
+              </button>
+            ))}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm text-white/60 block">Choose Your Companion</label>
-            <div className="grid grid-cols-1 gap-2">
-              {ANIMAL_COMPANIONS.map((animal) => (
-                <button
-                  key={animal.type}
-                  type="button"
-                  onClick={() => handleAnimalSelect(animal)}
-                  className={`p-3 rounded-lg transition-all duration-200 flex items-center gap-3
-                    ${animalType === animal.type
-                      ? 'bg-habit-green-from scale-[1.02]'
-                      : 'bg-black/20 hover:bg-black/30'
-                    }`}
-                >
-                  <div className="w-16 h-16 relative">
-                    <img 
-                      src={animal.stages.baby.image} 
-                      alt={animal.stages.baby.name}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div className="flex flex-col items-start flex-1">
-                    <span className="text-white font-medium">{animal.name}</span>
-                    <span className="text-white/60 text-xs">{animal.description}</span>
-                    <span className="text-white/40 text-xs italic mt-1">{animal.personality}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Evolution Preview */}
-          {showEvolution && (
-            <div className="bg-black/30 rounded-lg p-4 space-y-4">
-              <h3 className="text-white/80 text-sm font-medium">Evolution Journey</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {(['baby', 'growing', 'achieved'] as const).map((stage) => (
-                  <div key={stage} className="text-center space-y-2">
-                    <div className="w-full aspect-square relative">
-                      <img 
-                        src={selectedAnimal.stages[stage].image}
-                        alt={selectedAnimal.stages[stage].name}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-white/90 text-xs font-medium">
-                        {selectedAnimal.stages[stage].name}
-                      </p>
-                      <p className="text-white/50 text-[10px]">
-                        {selectedAnimal.stages[stage].description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-gradient-to-r from-habit-green-from to-habit-green-to hover:from-habit-green-to hover:to-habit-green-from text-white py-3 rounded-lg font-medium transition-all duration-300 disabled:opacity-50 relative"
+            className="w-full bg-gradient-to-r from-habit-green-from to-habit-green-to hover:from-habit-green-to hover:to-habit-green-from 
+              text-white py-2.5 rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
           >
             {isSubmitting ? (
               <span className="flex items-center justify-center">
@@ -298,7 +277,7 @@ export function AddHabitDialog({ open, onOpenChange, onSubmit }: AddHabitDialogP
                 Creating...
               </span>
             ) : (
-              'Start Journey with ' + selectedAnimal.name
+              'Start Journey'
             )}
           </button>
         </form>
