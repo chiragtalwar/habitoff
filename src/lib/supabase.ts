@@ -87,19 +87,22 @@ export async function addSampleHabits() {
       title: 'Daily Meditation',
       description: 'Practice mindfulness for 10 minutes',
       frequency: 'daily',
-      plant_type: 'flower'
+      animal_type: 'dog'
     },
     {
       title: 'Weekly Exercise',
       description: 'Go for a 30-minute run',
       frequency: 'weekly',
-      plant_type: 'tree'
+      animal_type: 'dog'
+
     },
+
     {
       title: 'Read Books',
       description: 'Read for 20 minutes',
       frequency: 'daily',
-      plant_type: 'succulent'
+      animal_type: 'dog'
+
     }
   ] as CreateHabitInput[];
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import { HabitFormData, HabitFrequency, PlantType } from "@/types/habit";
+import { HabitFormData, HabitFrequency, AnimalType } from "@/types/habit";
 
 interface AddHabitDialogProps {
   open: boolean;
@@ -8,26 +8,125 @@ interface AddHabitDialogProps {
   onSubmit: (habit: HabitFormData) => Promise<void>;
 }
 
-const PLANT_TYPES: { value: PlantType; emoji: string }[] = [
-  { value: 'flower', emoji: '🌸' },
-  { value: 'tree', emoji: '🌳' },
-  { value: 'succulent', emoji: '🌵' },
-  { value: 'herb', emoji: '🌿' }
+interface AnimalCompanionType {
+  type: AnimalType;
+  name: string;
+  description: string;
+  personality: string;
+  stages: {
+    baby: {
+      image: string;
+      name: string;
+      description: string;
+    };
+    growing: {
+      image: string;
+      name: string;
+      description: string;
+    };
+    achieved: {
+      image: string;
+      name: string;
+      description: string;
+    };
+  };
+}
+
+const ANIMAL_COMPANIONS: AnimalCompanionType[] = [
+  { 
+    type: 'lion',
+    name: 'Lion',
+    description: 'Perfect for leadership and courage-building habits',
+    personality: 'Brave & Majestic',
+    stages: {
+      baby: {
+        image: '/animals/lion/baby.jpg',
+        name: 'Lion Cub',
+        description: 'A playful cub learning to roar'
+      },
+      growing: {
+        image: '/animals/lion/growing.jpg',
+        name: 'Young Lion',
+        description: 'Growing stronger and braver each day'
+      },
+      achieved: {
+        image: '/animals/lion/achieved.jpg',
+        name: 'Majestic Lion',
+        description: 'A true leader of the pride'
+      }
+    }
+  },
+  { 
+    type: 'dog',
+    name: 'Dog',
+    description: 'Great for loyalty and daily routine habits',
+    personality: 'Faithful & Enthusiastic',
+    stages: {
+      baby: {
+        image: '/animals/dog/baby.jpg',
+        name: 'Puppy',
+        description: 'An eager puppy ready to learn'
+      },
+      growing: {
+        image: '/animals/dog/growing.jpg',
+        name: 'Young Dog',
+        description: 'Building discipline and loyalty'
+      },
+      achieved: {
+        image: '/animals/dog/achieved.jpg',
+        name: 'Wise Dog',
+        description: 'A master of dedication and routine'
+      }
+    }
+  },
+  { 
+    type: 'elephant',
+    name: 'Elephant',
+    description: 'Perfect for memory and learning habits',
+    personality: 'Wise & Gentle',
+    stages: {
+      baby: {
+        image: '/animals/elephant/baby.jpg',
+        name: 'Baby Elephant',
+        description: 'Taking first steps towards wisdom'
+      },
+      growing: {
+        image: '/animals/elephant/growing.jpg',
+        name: 'Young Elephant',
+        description: 'Growing in wisdom and strength'
+      },
+      achieved: {
+        image: '/animals/elephant/achieved.jpg',
+        name: 'Sage Elephant',
+        description: 'A master of memory and wisdom'
+      }
+    }
+  }
 ];
 
 const FREQUENCIES: { value: HabitFrequency; label: string }[] = [
   { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
+  { value: 'monthly', label: 'Monthly' }
 ];
 
 export function AddHabitDialog({ open, onOpenChange, onSubmit }: AddHabitDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [frequency, setFrequency] = useState<HabitFrequency>('daily');
-  const [plantType, setPlantType] = useState<PlantType>('flower');
+  const [animalType, setAnimalType] = useState<AnimalType>('lion');
+  const [selectedAnimal, setSelectedAnimal] = useState(ANIMAL_COMPANIONS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEvolution, setShowEvolution] = useState(false);
+
+  const handleAnimalSelect = (animal: typeof ANIMAL_COMPANIONS[number]) => {
+    setAnimalType(animal.type);
+    setSelectedAnimal(animal);
+    setShowEvolution(true);
+    // Hide evolution preview after 3 seconds
+    setTimeout(() => setShowEvolution(false), 3000);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +138,7 @@ export function AddHabitDialog({ open, onOpenChange, onSubmit }: AddHabitDialogP
         title: title.trim(),
         description: description.trim() || null,
         frequency,
-        plant_type: plantType,
+        animal_type: animalType,
       });
       resetForm();
       onOpenChange(false);
@@ -54,8 +153,10 @@ export function AddHabitDialog({ open, onOpenChange, onSubmit }: AddHabitDialogP
     setTitle("");
     setDescription("");
     setFrequency('daily');
-    setPlantType('flower');
+    setAnimalType('lion');
+    setSelectedAnimal(ANIMAL_COMPANIONS[0]);
     setError(null);
+    setShowEvolution(false);
   };
 
   if (!open) return null;
@@ -125,24 +226,63 @@ export function AddHabitDialog({ open, onOpenChange, onSubmit }: AddHabitDialogP
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm text-white/60 block">Choose Plant</label>
-            <div className="grid grid-cols-4 gap-2">
-              {PLANT_TYPES.map((plant) => (
+            <label className="text-sm text-white/60 block">Choose Your Companion</label>
+            <div className="grid grid-cols-1 gap-2">
+              {ANIMAL_COMPANIONS.map((animal) => (
                 <button
-                  key={plant.value}
+                  key={animal.type}
                   type="button"
-                  onClick={() => setPlantType(plant.value)}
-                  className={`p-3 text-2xl rounded-lg transition-all duration-200 ${
-                    plantType === plant.value
-                      ? 'bg-habit-green-from scale-110'
+                  onClick={() => handleAnimalSelect(animal)}
+                  className={`p-3 rounded-lg transition-all duration-200 flex items-center gap-3
+                    ${animalType === animal.type
+                      ? 'bg-habit-green-from scale-[1.02]'
                       : 'bg-black/20 hover:bg-black/30'
-                  }`}
+                    }`}
                 >
-                  {plant.emoji}
+                  <div className="w-16 h-16 relative">
+                    <img 
+                      src={animal.stages.baby.image} 
+                      alt={animal.stages.baby.name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex flex-col items-start flex-1">
+                    <span className="text-white font-medium">{animal.name}</span>
+                    <span className="text-white/60 text-xs">{animal.description}</span>
+                    <span className="text-white/40 text-xs italic mt-1">{animal.personality}</span>
+                  </div>
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Evolution Preview */}
+          {showEvolution && (
+            <div className="bg-black/30 rounded-lg p-4 space-y-4">
+              <h3 className="text-white/80 text-sm font-medium">Evolution Journey</h3>
+              <div className="grid grid-cols-3 gap-4">
+                {(['baby', 'growing', 'achieved'] as const).map((stage) => (
+                  <div key={stage} className="text-center space-y-2">
+                    <div className="w-full aspect-square relative">
+                      <img 
+                        src={selectedAnimal.stages[stage].image}
+                        alt={selectedAnimal.stages[stage].name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-white/90 text-xs font-medium">
+                        {selectedAnimal.stages[stage].name}
+                      </p>
+                      <p className="text-white/50 text-[10px]">
+                        {selectedAnimal.stages[stage].description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <button
             type="submit"
@@ -158,7 +298,7 @@ export function AddHabitDialog({ open, onOpenChange, onSubmit }: AddHabitDialogP
                 Creating...
               </span>
             ) : (
-              'Plant Habit'
+              'Start Journey with ' + selectedAnimal.name
             )}
           </button>
         </form>

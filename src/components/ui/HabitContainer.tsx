@@ -2,6 +2,8 @@ import { Check, Trash2, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { FallingLeaves } from "../animations/FallingLeaves";
 import { HabitWithCompletedDates } from "@/types/habit";
+import { EnhancedHabitList } from "../habits/EnhancedHabitList";
+import { habitService } from "@/services/habitService";
 
 const PLANT_TYPES: { value: string; emoji: string }[] = [
   { value: 'flower', emoji: '🌸' },
@@ -43,7 +45,9 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
     const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
 
-    const isCompleted = habit.completedDates.includes(new Date().toISOString().split('T')[0]);
+    const todayLocal = habitService.getTodayInUserTimezone();
+    const isCompleted = habit.completedDates.includes(todayLocal);
+    
     if (!isCompleted) {
       setAnimatingHabit({ id: habitId, type: habit.plant_type });
       setTimeout(() => setAnimatingHabit(null), 6000);
@@ -79,6 +83,24 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
     return completions;
   };
 
+  // Use enhanced view for 3 or more habits
+  if (habits.length >= 3) {
+    return (
+      <>
+        <FallingLeaves 
+          isAnimating={animatingHabit !== null} 
+          plantType={animatingHabit?.type || 'flower'} 
+        />
+        <EnhancedHabitList 
+          habits={habits}
+          onToggleHabit={handleToggleHabit}
+          onDeleteHabit={onDeleteHabit}
+        />
+      </>
+    );
+  }
+
+  // Original garden view for fewer than 3 habits
   return (
     <>
       <FallingLeaves 
@@ -92,6 +114,7 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
           const currentWeekProgress = getWeeklyProgress(habit);
           const lastWeekProgress = getWeeklyProgress(habit, true);
           const progressDiff = currentWeekProgress - lastWeekProgress;
+          const todayLocal = habitService.getTodayInUserTimezone();
           
           return (
             <div
@@ -133,22 +156,20 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
                         handleToggleHabit(habit.id);
                       }}
                       className={`group relative p-2 rounded-lg transition-all duration-500 transform 
-                        ${habit.completedDates.includes(new Date().toISOString().split('T')[0])
+                        ${habit.completedDates.includes(todayLocal)
                           ? 'bg-emerald-500 text-white scale-110 hover:bg-emerald-600 hover:scale-105' 
                           : 'bg-white/10 text-white/60 hover:bg-emerald-500/20 hover:text-emerald-300 hover:scale-105'
                         } active:scale-95`}
                     >
                       <Check className={`w-4 h-4 transition-all duration-500 
-                        ${habit.completedDates.includes(new Date().toISOString().split('T')[0])
+                        ${habit.completedDates.includes(todayLocal)
                           ? 'group-hover:rotate-12 animate-bounce-once' 
                           : 'group-hover:-rotate-12'}`} 
                       />
                       {/* Success ripple effect */}
-                      <span className={`absolute inset-0 rounded-lg transition-all duration-700
-                        ${habit.completedDates.includes(new Date().toISOString().split('T')[0])
-                          ? 'animate-ripple bg-emerald-400/30'
-                          : 'bg-transparent'}`}
-                      />
+                      {habit.completedDates.includes(todayLocal) && (
+                        <span className="absolute inset-0 rounded-lg transition-all duration-700 animate-ripple bg-emerald-400/30" />
+                      )}
                     </button>
                     <button
                       onClick={(e) => {
@@ -177,9 +198,10 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
                   {days.map((day, index) => {
                     const date = new Date(startOfWeek);
                     date.setDate(startOfWeek.getDate() + index);
-                    const dateStr = date.toISOString().split('T')[0];
-                    const isToday = date.toDateString() === today.toDateString();
-                    const isPast = date < today;
+                    const dateStr = habitService.normalizeDateToStartOfDay(date);
+                    const todayLocal = habitService.getTodayInUserTimezone();
+                    const isToday = dateStr === todayLocal;
+                    const isPast = date <= new Date();
                     const isCompleted = habit.completedDates.includes(dateStr);
                     
                     return (
@@ -196,6 +218,11 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
                       >
                         <span className="text-white/80 text-[10px] font-medium">{day}</span>
                         <span className="text-white font-bold text-sm">{date.getDate()}</span>
+                        {isCompleted && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Check className="w-4 h-4 text-emerald-400" />
+                          </div>
+                        )}
                       </button>
                     );
                   })}

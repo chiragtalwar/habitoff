@@ -17,7 +17,7 @@ async function testHabitOperations() {
       title: 'Test Habit',
       description: 'Testing habit operations',
       frequency: 'daily',
-      plant_type: 'flower'
+      animal_type: 'dog'
     } as const;
 
     console.log('\nAdding test habit...');

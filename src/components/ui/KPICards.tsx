@@ -17,6 +17,7 @@ export function KPICards({ habits }: KPICardsProps) {
   // Calculate total possible completions considering frequency and start date
   const totalPossibleCompletions = habits.reduce((acc: number, habit) => {
     const habitStartDate = new Date(habit.created_at);
+    habitStartDate.setFullYear(2025);
     habitStartDate.setHours(0, 0, 0, 0);
     
     // Use the later of habit start date or start of month
@@ -46,16 +47,14 @@ export function KPICards({ habits }: KPICardsProps) {
 
   // Calculate actual completions this month
   const monthlyCompletions = habits.reduce((acc: number, habit) => {
-    const habitStartDate = new Date(habit.created_at);
-    habitStartDate.setHours(0, 0, 0, 0);
-    
-    // Use the later of habit start date or start of month
-    const effectiveStartDate = habitStartDate > startOfMonth ? habitStartDate : startOfMonth;
-    
     const completionsThisMonth = habit.completedDates.filter(date => {
       const completionDate = new Date(date);
+      completionDate.setFullYear(2025);
       completionDate.setHours(0, 0, 0, 0);
-      return completionDate >= effectiveStartDate && completionDate <= today;
+      return (
+        completionDate >= startOfMonth && 
+        completionDate <= endOfMonth
+      );
     }).length;
     
     return acc + completionsThisMonth;
@@ -96,39 +95,10 @@ export function KPICards({ habits }: KPICardsProps) {
     return Math.max(acc, streak);
   }, 0);
 
-  // Calculate current streak if not provided
-  const calculateCurrentStreak = (dates: string[]): number => {
-    if (dates.length === 0) return 0;
-    
-    const sortedDates = [...dates].sort((a, b) => b.localeCompare(a));
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    
-    // Check if the habit was completed today or yesterday
-    if (sortedDates[0] !== today && sortedDates[0] !== yesterday) {
-      return 0;
-    }
-
-    let streak = 1;
-    for (let i = 1; i < sortedDates.length; i++) {
-      const current = new Date(sortedDates[i]);
-      const previous = new Date(sortedDates[i - 1]);
-      const dayDiff = (previous.getTime() - current.getTime()) / (1000 * 60 * 60 * 24);
-      
-      if (dayDiff === 1) {
-        streak++;
-      } else {
-        break;
-      }
-    }
-    
-    return streak;
-  };
-
   // Calculate current streak
-  const actualCurrentStreak = Math.max(
-    ...habits.map(habit => calculateCurrentStreak(habit.completedDates))
-  );
+  const actualCurrentStreak = habits.reduce((maxStreak, habit) => {
+    return Math.max(maxStreak, habit.currentStreak || 0);
+  }, 0);
 
   // Get motivational message based on completion
   const getMotivationalMessage = (completion: number) => {
@@ -150,10 +120,9 @@ export function KPICards({ habits }: KPICardsProps) {
 
   // Get comparison message
   const getComparisonMessage = () => {
-    const lastMonthName = lastMonthStart.toLocaleString('default', { month: 'short' });
-    if (completionDiff > 0) return `+${completionDiff}% vs ${lastMonthName}`;
-    if (completionDiff < 0) return `${completionDiff}% vs ${lastMonthName}`;
-    return `Same as ${lastMonthName}`;
+    if (actualCurrentStreak === 0) return "Keep Going!";
+    if (actualCurrentStreak === longestStreak) return "All-time Best!";
+    return `${longestStreak - actualCurrentStreak} days to beat!`;
   };
 
   // If no habits, return null - this prevents any flashing
@@ -255,7 +224,7 @@ export function KPICards({ habits }: KPICardsProps) {
               <p className="text-habit-highlight/90 text-sm font-medium">{getStreakMessage(actualCurrentStreak)}</p>
               <div className="flex items-center text-habit-highlight text-xs">
                 <TrendingUp className="w-3 h-3 mr-0.5" />
-                <span>{actualCurrentStreak === longestStreak ? 'All-time Best!' : 'Keep Going!'}</span>
+                <span>{getComparisonMessage()}</span>
               </div>
             </div>
           </div>

@@ -26,12 +26,15 @@ export const HabitGrid = ({ habits }: HabitGridProps) => {
   }, []);
 
   const getCompletionStatus = (habit: HabitWithCompletedDates, date: Date): boolean => {
-    return habit.completedDates.some(
-      (completionDate: string) => {
-        const completion = new Date(completionDate);
-        return completion.toDateString() === date.toDateString();
-      }
-    );
+    const normalizedDate = new Date(date);
+    normalizedDate.setHours(0, 0, 0, 0);
+    normalizedDate.setFullYear(2025);
+    
+    return habit.completedDates.some(completionDate => {
+      const completion = new Date(completionDate);
+      completion.setHours(0, 0, 0, 0);
+      return completion.toISOString().split('T')[0] === normalizedDate.toISOString().split('T')[0];
+    });
   };
 
   const getCompletionRatio = (habit: HabitWithCompletedDates): string => {

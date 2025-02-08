@@ -1,12 +1,13 @@
 import { useCallback } from 'react';
 import { useSubscription } from './useSubscription';
 import { useHabits } from './useHabits';
-import { PREMIUM_FEATURES, PlantType, AnalyticsFeature, UIFeature } from '../constants/premium';
+import { PREMIUM_FEATURES, PlantType, AnalyticsFeature, UIFeature, AnimalType } from '../constants/premium';
 
 interface PremiumGuardReturn {
   isPremium: boolean;
   canAddHabit: () => boolean;
   canUsePlantType: (plantType: PlantType) => boolean;
+  canUseAnimalType: (animalType: AnimalType) => boolean;
   canAccessAnalytics: (feature: AnalyticsFeature) => boolean;
   canAccessUIFeature: (feature: UIFeature) => boolean;
   showUpgradeModal: boolean;
@@ -31,6 +32,12 @@ export function usePremiumGuard(): PremiumGuardReturn {
     return PREMIUM_FEATURES.PLANT_TYPES.FREE.includes(plantType as any);
   }, [isPremium]);
 
+  // Check if user can use a specific animal type
+  const canUseAnimalType = useCallback((animalType: AnimalType) => {
+    if (isPremium) return true;
+    return PREMIUM_FEATURES.ANIMAL_TYPES.FREE.includes(animalType as any);
+  }, [isPremium]);
+
   // Check if user can access specific analytics feature
   const canAccessAnalytics = useCallback((feature: AnalyticsFeature) => {
     if (isPremium) return true;
@@ -50,6 +57,7 @@ export function usePremiumGuard(): PremiumGuardReturn {
     isPremium,
     canAddHabit,
     canUsePlantType,
+    canUseAnimalType,
     canAccessAnalytics,
     canAccessUIFeature,
     showUpgradeModal: !isPremium,

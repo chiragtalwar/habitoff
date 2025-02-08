@@ -14,17 +14,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
-      <Suspense>
-        {!user ? <WelcomePage /> : <Index />}
-      </Suspense>
-      
-      {/* Premium Status Button & Modal */}
-      <PremiumStatusButton onClick={() => setShowUpgradeModal(true)} />
-      <UpgradeModal 
-        isOpen={showUpgradeModal} 
-        onClose={() => setShowUpgradeModal(false)} 
-      />
-    </div>
+          <Suspense>
+            {!user ? <WelcomePage /> : <Index />}
+          </Suspense>
+          
+          {/* Premium Status Button & Modal */}
+          <PremiumStatusButton onClick={() => setShowUpgradeModal(true)} />
+          <UpgradeModal 
+            isOpen={showUpgradeModal} 
+            onClose={() => setShowUpgradeModal(false)} 
+          />
+        </div>
   );
 }
 
