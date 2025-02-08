@@ -17,28 +17,27 @@ export function KPICards({ habits }: KPICardsProps) {
   // Calculate total possible completions considering frequency and start date
   const totalPossibleCompletions = habits.reduce((acc: number, habit) => {
     const habitStartDate = new Date(habit.created_at);
+    habitStartDate.setHours(0, 0, 0, 0);
+    
+    // Use the later of habit start date or start of month
     const effectiveStartDate = habitStartDate > startOfMonth ? habitStartDate : startOfMonth;
     
-    // Always use end of month for monthly progress
-    const daysInMonth = Math.floor((endOfMonth.getTime() - effectiveStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    // Calculate days from effective start to end of month
+    const daysInPeriod = Math.floor((endOfMonth.getTime() - effectiveStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
     let requiredCompletions = 0;
     switch (habit.frequency) {
       case 'daily':
-        // For daily habits, count from today to end of month
-        today.setHours(0, 0, 0, 0);
-        const daysRemaining = Math.floor((endOfMonth.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        requiredCompletions = daysRemaining;
+        requiredCompletions = daysInPeriod;
         break;
-      
       case 'weekly':
-        // For weekly habits, count remaining full weeks in month
-        requiredCompletions = Math.ceil(daysInMonth / 7);
+        // Calculate full weeks remaining in the month from effective start
+        requiredCompletions = Math.ceil(daysInPeriod / 7);
         break;
-      
       case 'monthly':
-        // For monthly habits, need 1 completion
-        requiredCompletions = 1;
+        // If habit started before the 15th, count it for this month
+        const dayOfMonth = effectiveStartDate.getDate();
+        requiredCompletions = dayOfMonth <= 15 ? 1 : 0;
         break;
     }
     
@@ -47,13 +46,18 @@ export function KPICards({ habits }: KPICardsProps) {
 
   // Calculate actual completions this month
   const monthlyCompletions = habits.reduce((acc: number, habit) => {
+    const habitStartDate = new Date(habit.created_at);
+    habitStartDate.setHours(0, 0, 0, 0);
+    
+    // Use the later of habit start date or start of month
+    const effectiveStartDate = habitStartDate > startOfMonth ? habitStartDate : startOfMonth;
+    
     const completionsThisMonth = habit.completedDates.filter(date => {
       const completionDate = new Date(date);
       completionDate.setHours(0, 0, 0, 0);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return completionDate.getTime() === today.getTime();
+      return completionDate >= effectiveStartDate && completionDate <= today;
     }).length;
+    
     return acc + completionsThisMonth;
   }, 0);
 

@@ -8,7 +8,6 @@ import { useState } from "react";
 import { useHabits } from "@/hooks/useHabits";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AnalyticsPanel } from "@/components/ui/AnalyticsPanel";
-import { TestPaymentFlow } from "@/components/subscription/TestPaymentFlow";
 
 export default function Index() {
   const { habits, addHabit, toggleHabit, deleteHabit } = useHabits();
@@ -38,9 +37,6 @@ export default function Index() {
           </div>
           
           <div className="space-y-2 -mt-14">
-            {/* Payment Test Component - REMOVE IN PRODUCTION */}
-            <TestPaymentFlow />
-            
             <KPICards habits={habits} />
             <HabitContainer 
               habits={habits} 
