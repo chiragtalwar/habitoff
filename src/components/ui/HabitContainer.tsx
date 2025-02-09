@@ -1,16 +1,80 @@
-import { Check, Trash2, Flame, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, Trash2, Flame, ChevronLeft, ChevronRight, Crown, Star, Zap } from "lucide-react";
 import { useState } from "react";
 import { FallingLeaves } from "../animations/FallingLeaves";
-import { HabitWithCompletedDates } from "@/types/habit";
+import { HabitWithCompletedDates, AnimalType } from "@/types/habit";
 import { EnhancedHabitList } from "../habits/EnhancedHabitList";
 import { habitService } from "@/services/habitService";
+import { cn } from "@/lib/utils";
 
-const PLANT_TYPES: { value: string; emoji: string }[] = [
-  { value: 'flower', emoji: '🌸' },
-  { value: 'tree', emoji: '🌳' },
-  { value: 'succulent', emoji: '🌵' },
-  { value: 'herb', emoji: '🌿' }
-];
+// Animal companions based on habit type/time
+const ANIMAL_COMPANIONS = {
+  lion: {
+    stages: {
+      baby: { image: '/animals/lion/baby.jpg' },
+      growing: { image: '/animals/lion/growing.jpg' },
+      achieved: { image: '/animals/lion/achieved.jpg' }
+    },
+    colors: {
+      primary: 'from-amber-600/20 to-amber-900/20',
+      accent: 'ring-amber-500/30',
+      highlight: 'bg-amber-500/30',
+      text: 'text-amber-400'
+    },
+    icon: Crown
+  },
+  dog: {
+    stages: {
+      baby: { image: '/animals/dog/baby.jpg' },
+      growing: { image: '/animals/dog/growing.jpg' },
+      achieved: { image: '/animals/dog/achieved.jpg' }
+    },
+    colors: {
+      primary: 'from-blue-600/20 to-blue-900/20',
+      accent: 'ring-blue-500/30',
+      highlight: 'bg-blue-500/30',
+      text: 'text-blue-400'
+    },
+    icon: Star
+  },
+  elephant: {
+    stages: {
+      baby: { image: '/animals/elephant/baby.jpg' },
+      growing: { image: '/animals/elephant/growing.jpg' },
+      achieved: { image: '/animals/elephant/achieved.jpg' }
+    },
+    colors: {
+      primary: 'from-purple-600/20 to-purple-900/20',
+      accent: 'ring-purple-500/30',
+      highlight: 'bg-purple-500/30',
+      text: 'text-purple-400'
+    },
+    icon: Zap
+  }
+} as const;
+
+// Evolution messages for better user engagement
+const EVOLUTION_MESSAGES = {
+  baby: {
+    start: "Just started! 🌟",
+    near: "Almost growing! Keep going! ✨",
+    tooltip: (daysLeft: number) => `Complete ${daysLeft} more daily habits to evolve!`
+  },
+  growing: {
+    start: "Getting stronger! 💪",
+    near: "Almost there! So close! 🌟",
+    tooltip: (daysLeft: number) => `${daysLeft} more days to reach final form!`
+  },
+  achieved: {
+    complete: "Maximum level reached! 👑",
+    tooltip: "Legendary status achieved!"
+  }
+} as const;
+
+// Evolution thresholds
+const EVOLUTION_THRESHOLDS = {
+  growing: 7,
+  achieved: 30
+} as const;
 
 interface HabitContainerProps {
   habits: HabitWithCompletedDates[];
@@ -41,6 +105,54 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
     }
   };
 
+  // Get companion for habit based on its type
+  const getHabitCompanion = (habit: HabitWithCompletedDates) => {
+    return { type: habit.animal_type as AnimalType, companion: ANIMAL_COMPANIONS[habit.animal_type as AnimalType] };
+  };
+
+  // Get evolution stage based on streak
+  const getEvolutionStage = (streak: number) => {
+    if (streak >= 30) return 'achieved';
+    if (streak >= 7) return 'growing';
+    return 'baby';
+  };
+
+  const getEvolutionProgress = (streak: number) => {
+    if (streak >= EVOLUTION_THRESHOLDS.achieved) return 100;
+    if (streak >= EVOLUTION_THRESHOLDS.growing) {
+      return Math.min(100, ((streak - EVOLUTION_THRESHOLDS.growing) / (EVOLUTION_THRESHOLDS.achieved - EVOLUTION_THRESHOLDS.growing)) * 100);
+    }
+    return Math.min(100, (streak / EVOLUTION_THRESHOLDS.growing) * 100);
+  };
+
+  const getEvolutionMessage = (streak: number, evolutionStage: string) => {
+    if (evolutionStage === 'achieved') {
+      return EVOLUTION_MESSAGES.achieved.complete;
+    }
+    
+    const nextThreshold = evolutionStage === 'baby' ? EVOLUTION_THRESHOLDS.growing : EVOLUTION_THRESHOLDS.achieved;
+    const daysLeft = nextThreshold - streak;
+    
+    if (evolutionStage === 'baby') {
+      return daysLeft <= 2 ? EVOLUTION_MESSAGES.baby.near : EVOLUTION_MESSAGES.baby.start;
+    }
+    
+    return daysLeft <= 5 ? EVOLUTION_MESSAGES.growing.near : EVOLUTION_MESSAGES.growing.start;
+  };
+
+  const getEvolutionTooltip = (streak: number, evolutionStage: string) => {
+    if (evolutionStage === 'achieved') {
+      return EVOLUTION_MESSAGES.achieved.tooltip;
+    }
+    
+    const nextThreshold = evolutionStage === 'baby' ? EVOLUTION_THRESHOLDS.growing : EVOLUTION_THRESHOLDS.achieved;
+    const daysLeft = nextThreshold - streak;
+    
+    return evolutionStage === 'baby' 
+      ? EVOLUTION_MESSAGES.baby.tooltip(daysLeft)
+      : EVOLUTION_MESSAGES.growing.tooltip(daysLeft);
+  };
+
   const handleToggleHabit = async (habitId: string) => {
     const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
@@ -49,7 +161,7 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
     const isCompleted = habit.completedDates.includes(todayLocal);
     
     if (!isCompleted) {
-      setAnimatingHabit({ id: habitId, type: habit.plant_type });
+      setAnimatingHabit({ id: habitId, type: habit.animal_type });
       setTimeout(() => setAnimatingHabit(null), 6000);
     }
     
@@ -89,7 +201,7 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
       <>
         <FallingLeaves 
           isAnimating={animatingHabit !== null} 
-          plantType={animatingHabit?.type || 'flower'} 
+          plantType={animatingHabit?.type || 'lion'} 
         />
         <EnhancedHabitList 
           habits={habits}
@@ -105,12 +217,13 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
     <>
       <FallingLeaves 
         isAnimating={animatingHabit !== null} 
-        plantType={animatingHabit?.type || 'flower'} 
+        plantType={animatingHabit?.type || 'lion'} 
       />
 
       <div className="space-y-3 p-4 animate-fade-in">
         {habits.map((habit) => {
-          const plantEmoji = PLANT_TYPES.find(p => p.value === habit.plant_type)?.emoji || '🌱';
+          const { companion } = getHabitCompanion(habit);
+          const evolutionStage = getEvolutionStage(habit.streak);
           const currentWeekProgress = getWeeklyProgress(habit);
           const lastWeekProgress = getWeeklyProgress(habit, true);
           const progressDiff = currentWeekProgress - lastWeekProgress;
@@ -121,14 +234,140 @@ export const HabitContainer = ({ habits, onToggleHabit, onDeleteHabit }: HabitCo
               key={habit.id}
               className={`group bg-gradient-to-br from-[#043d2d] to-[#085e46] rounded-xl p-4 shadow-lg 
                 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]
-                relative overflow-hidden
+                relative
                 before:absolute before:inset-0 before:bg-gradient-to-br before:from-emerald-500/10 before:to-transparent 
                 before:opacity-0 before:transition-opacity before:duration-300 group-hover:before:opacity-100`}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2.5">
-                  <div className="bg-white/10 p-2 rounded-lg group-hover:scale-110 transition-transform duration-300">
-                    <span className="text-2xl group-hover:animate-bounce">{plantEmoji}</span>
+                  <div className="relative group/animal">
+                    <div className={cn(
+                      "w-11 h-11 relative rounded-lg overflow-hidden bg-black/20",
+                      `ring-2 ${companion.colors.accent}`,
+                      "shadow-lg shadow-black/20 group-hover:scale-110 transition-transform duration-300"
+                    )}>
+                      <img 
+                        src={companion.stages[evolutionStage].image}
+                        alt={`${habit.title} - ${evolutionStage} stage`}
+                        className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110"
+                      />
+                      {evolutionStage === 'achieved' && (
+                        <div className={cn(
+                          "absolute inset-0 flex items-center justify-center",
+                          "bg-gradient-to-t from-black/50 to-transparent"
+                        )}>
+                          <companion.icon className={cn(
+                            "w-4 h-4", 
+                            companion.colors.text,
+                            "animate-bounce"
+                          )} />
+                        </div>
+                      )}
+                      
+                      {/* Evolution Progress Bar with Label */}
+                      {evolutionStage !== 'achieved' && (
+                        <div className="absolute bottom-0 left-0 right-0">
+                          {/* Progress Bar */}
+                          <div className="h-1.5 bg-black/30">
+                            <div 
+                              className={cn(
+                                "h-full transition-all duration-500",
+                                companion.colors.text,
+                                "opacity-80"
+                              )}
+                              style={{ width: `${getEvolutionProgress(habit.streak)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Enhanced Evolution Tooltip - Updated styling */}
+                    <div className="absolute left-1/2 w-72 p-4 
+                      bg-gradient-to-br from-[#043d2d]/95 to-[#032921]/95 backdrop-blur-md rounded-xl
+                      border border-emerald-600/20 shadow-2xl
+                      transition-all duration-300 scale-0 opacity-0 
+                      group-hover/animal:scale-100 group-hover/animal:opacity-100
+                      pointer-events-none z-[9999]"
+                      style={{
+                        top: '-240px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.3))'
+                      }}
+                    >
+                      <div className="text-center space-y-3">
+                        {/* Stage Header */}
+                        <div className="space-y-1.5">
+                          <p className={cn(
+                            "text-base font-semibold",
+                            companion.colors.text
+                          )}>
+                            {evolutionStage.charAt(0).toUpperCase() + evolutionStage.slice(1)} Stage
+                          </p>
+                          <p className="text-white/90 text-sm font-medium">
+                            {getEvolutionMessage(habit.streak, evolutionStage)}
+                          </p>
+                          <p className="text-white/70 text-xs">
+                            {getEvolutionTooltip(habit.streak, evolutionStage)}
+                          </p>
+                        </div>
+                        
+                        {/* Evolution Preview */}
+                        {evolutionStage !== 'achieved' && (
+                          <div className="pt-3 border-t border-white/10">
+                            <div className="flex items-center justify-center gap-6">
+                              {/* Current Stage */}
+                              <div className="text-center space-y-2">
+                                <div className={cn(
+                                  "w-16 h-16 rounded-lg overflow-hidden ring-2",
+                                  companion.colors.accent
+                                )}>
+                                  <img 
+                                    src={companion.stages[evolutionStage].image}
+                                    alt="Current"
+                                    className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-300"
+                                  />
+                                </div>
+                                <span className="text-[11px] text-white/70 font-medium block">Current</span>
+                              </div>
+
+                              {/* Arrow */}
+                              <div className="flex flex-col items-center gap-1">
+                                <div className={cn(
+                                  "w-8 h-[2px]",
+                                  companion.colors.text
+                                )} />
+                                <companion.icon className={cn(
+                                  "w-4 h-4",
+                                  companion.colors.text
+                                )} />
+                              </div>
+
+                              {/* Next Stage */}
+                              <div className="text-center space-y-2">
+                                <div className={cn(
+                                  "w-16 h-16 rounded-lg overflow-hidden ring-2 ring-white/5"
+                                )}>
+                                  <img 
+                                    src={companion.stages[evolutionStage === 'baby' ? 'growing' : 'achieved'].image}
+                                    alt="Next"
+                                    className="w-full h-full object-cover opacity-80 transform hover:scale-110 transition-transform duration-300"
+                                  />
+                                </div>
+                                <span className="text-[11px] text-white/50 font-medium block">Next Stage</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tooltip Arrow - Updated styling */}
+                      <div className="absolute left-1/2 bottom-0 w-4 h-4 -mb-2 
+                        bg-[#032921]/95 transform rotate-45 -translate-x-1/2 
+                        border-r border-b border-emerald-600/20" 
+                      />
+                    </div>
                   </div>
                   <div className="flex flex-col items-start">
                     <h3 className="text-white font-semibold text-base">{habit.title}</h3>

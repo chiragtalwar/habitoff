@@ -200,56 +200,40 @@ export const habitService = {
       hasYesterday: sortedDates.includes(yesterdayLocal)
     });
 
-    // If completed today, start with streak of 1
-    if (sortedDates[0] === todayLocal) {
-      let streak = 1;
-      
-      // Check consecutive previous days
-      for (let i = 1; i < sortedDates.length; i++) {
-        const currentDate = new Date(sortedDates[i]);
-        const previousDate = new Date(sortedDates[i - 1]);
-        currentDate.setFullYear(2025);
-        previousDate.setFullYear(2025);
-        
-        const diffDays = Math.floor(
-          (previousDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        
-        if (diffDays === 1) {
-          streak++;
-        } else {
-          break;
-        }
-      }
-      return streak;
+    // If neither today nor yesterday is completed, streak is 0
+    if (!sortedDates.includes(todayLocal) && !sortedDates.includes(yesterdayLocal)) {
+      console.log('No completion for today or yesterday, streak is 0');
+      return 0;
     }
+
+    // Get the most recent completion date
+    const mostRecentDate = sortedDates[0];
     
-    // If completed yesterday but not today, check if it maintains the streak
-    if (sortedDates[0] === yesterdayLocal) {
-      let streak = 1;
-      
-      // Check consecutive previous days
-      for (let i = 1; i < sortedDates.length; i++) {
-        const currentDate = new Date(sortedDates[i]);
-        const previousDate = new Date(sortedDates[i - 1]);
-        currentDate.setFullYear(2025);
-        previousDate.setFullYear(2025);
-        
-        const diffDays = Math.floor(
-          (previousDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        
-        if (diffDays === 1) {
-          streak++;
-        } else {
-          break;
-        }
-      }
-      return streak;
+    // If the most recent completion is older than yesterday, streak is 0
+    if (mostRecentDate < yesterdayLocal) {
+      console.log('Most recent completion is older than yesterday, streak is 0');
+      return 0;
     }
+
+    // Start counting streak from the most recent completion
+    let streak = 1;
+    let currentDate = new Date(mostRecentDate);
     
-    // If neither today nor yesterday is completed, streak is broken
-    return 0;
+    // Check consecutive previous days
+    for (let i = 1; i < sortedDates.length; i++) {
+      const prevDate = new Date(sortedDates[i]);
+      const diffDays = Math.floor((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 1) {
+        streak++;
+        currentDate = prevDate;
+      } else {
+        break;
+      }
+    }
+
+    console.log('Final streak calculation:', { streak });
+    return streak;
   },
 
   calculateLongestStreak(dates: string[]): number {
@@ -546,32 +530,55 @@ export const habitService = {
       const habitIndex = habits.findIndex(h => h.id === habitId);
       if (habitIndex !== -1) {
         const updatedCompletedDates = habits[habitIndex].completedDates.filter(date => date !== today);
+        const currentStreak = this.calculateCurrentStreak(updatedCompletedDates);
+        const longestStreak = this.calculateLongestStreak(updatedCompletedDates);
+
+        console.log('Unmarking habit:', {
+          habitId,
+          updatedCompletedDates,
+          currentStreak,
+          longestStreak
+        });
+        
         habits[habitIndex] = {
           ...habits[habitIndex],
           completedDates: updatedCompletedDates,
-          currentStreak: this.calculateCurrentStreak(updatedCompletedDates),
-          longestStreak: this.calculateLongestStreak(updatedCompletedDates),
+          currentStreak,
+          longestStreak,
+          streak: currentStreak, // Make sure to update the streak field
           last_completed: updatedCompletedDates.length > 0 
-            ? new Date(updatedCompletedDates[updatedCompletedDates.length - 1]).toISOString() 
+            ? this.localToUTCDate(updatedCompletedDates[updatedCompletedDates.length - 1])
             : null
         };
         await this.saveLocalHabits(habits);
-      }
 
-      // Try to sync with Supabase with retry logic
-      await retryOperation(async () => {
-        const { error } = await supabase
-          .from('habit_completions')
-          .delete()
-          .eq('habit_id', habitId)
-          .eq('completed_date', utcDate);
+        // Try to sync with Supabase with retry logic
+        await retryOperation(async () => {
+          // First delete the completion
+          const { error: deleteError } = await supabase
+            .from('habit_completions')
+            .delete()
+            .eq('habit_id', habitId)
+            .eq('completed_date', utcDate);
 
-        if (error) throw error;
-      });
+          if (deleteError) throw deleteError;
 
-      // Force sync if user is connected
-      if (habits[habitIndex]?.user_id && navigator.onLine) {
-        await this.syncWithSupabase(habits[habitIndex].user_id, true).catch(console.error);
+          // Then update the habit's streak in Supabase
+          const { error: updateError } = await supabase
+            .from('habits')
+            .update({
+              streak: currentStreak,
+              last_completed: habits[habitIndex].last_completed
+            })
+            .eq('id', habitId);
+
+          if (updateError) throw updateError;
+        });
+
+        // Force sync if user is connected
+        if (habits[habitIndex]?.user_id && navigator.onLine) {
+          await this.syncWithSupabase(habits[habitIndex].user_id, true).catch(console.error);
+        }
       }
     } catch (error) {
       console.error('Error unmarking habit complete:', error);

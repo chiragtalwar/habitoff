@@ -49,6 +49,29 @@ const ANIMAL_COMPANIONS = {
   }
 } as const;
 
+// Add evolution messages and thresholds at the top
+const EVOLUTION_MESSAGES = {
+  baby: {
+    start: "Just started! 🌟",
+    near: "Almost growing! Keep going! ✨",
+    tooltip: (daysLeft: number) => `Complete ${daysLeft} more daily habits to evolve!`
+  },
+  growing: {
+    start: "Getting stronger! 💪",
+    near: "Almost there! So close! 🌟",
+    tooltip: (daysLeft: number) => `${daysLeft} more days to reach final form!`
+  },
+  achieved: {
+    complete: "Maximum level reached! 👑",
+    tooltip: "Legendary status achieved!"
+  }
+} as const;
+
+const EVOLUTION_THRESHOLDS = {
+  growing: 7,
+  achieved: 30
+} as const;
+
 interface EnhancedHabitListProps {
   habits: HabitWithCompletedDates[];
   onToggleHabit: (id: string) => void;
@@ -90,6 +113,43 @@ export function EnhancedHabitList({ habits, onToggleHabit, onDeleteHabit }: Enha
     return 'baby';
   };
 
+  // Add these helper functions before the return statement
+  const getEvolutionProgress = (streak: number) => {
+    if (streak >= EVOLUTION_THRESHOLDS.achieved) return 100;
+    if (streak >= EVOLUTION_THRESHOLDS.growing) {
+      return Math.min(100, ((streak - EVOLUTION_THRESHOLDS.growing) / (EVOLUTION_THRESHOLDS.achieved - EVOLUTION_THRESHOLDS.growing)) * 100);
+    }
+    return Math.min(100, (streak / EVOLUTION_THRESHOLDS.growing) * 100);
+  };
+
+  const getEvolutionMessage = (streak: number, evolutionStage: string) => {
+    if (evolutionStage === 'achieved') {
+      return EVOLUTION_MESSAGES.achieved.complete;
+    }
+    
+    const nextThreshold = evolutionStage === 'baby' ? EVOLUTION_THRESHOLDS.growing : EVOLUTION_THRESHOLDS.achieved;
+    const daysLeft = nextThreshold - streak;
+    
+    if (evolutionStage === 'baby') {
+      return daysLeft <= 2 ? EVOLUTION_MESSAGES.baby.near : EVOLUTION_MESSAGES.baby.start;
+    }
+    
+    return daysLeft <= 5 ? EVOLUTION_MESSAGES.growing.near : EVOLUTION_MESSAGES.growing.start;
+  };
+
+  const getEvolutionTooltip = (streak: number, evolutionStage: string) => {
+    if (evolutionStage === 'achieved') {
+      return EVOLUTION_MESSAGES.achieved.tooltip;
+    }
+    
+    const nextThreshold = evolutionStage === 'baby' ? EVOLUTION_THRESHOLDS.growing : EVOLUTION_THRESHOLDS.achieved;
+    const daysLeft = nextThreshold - streak;
+    
+    return evolutionStage === 'baby' 
+      ? EVOLUTION_MESSAGES.baby.tooltip(daysLeft)
+      : EVOLUTION_MESSAGES.growing.tooltip(daysLeft);
+  };
+
   // Handle habit completion with animation
   const handleHabitComplete = async (habitId: string) => {
     const habit = habits.find(h => h.id === habitId);
@@ -109,7 +169,7 @@ export function EnhancedHabitList({ habits, onToggleHabit, onDeleteHabit }: Enha
 
   return (
     <div className="space-y-2 p-4">
-      <div className="bg-gradient-to-br from-[#043d2d]/90 to-[#032921]/90 rounded-xl overflow-hidden border border-emerald-900/30 shadow-xl relative">
+      <div className="bg-gradient-to-br from-[#043d2d]/90 to-[#032921]/90 rounded-xl border border-emerald-900/30 shadow-xl relative">
         {/* Table Header */}
         <div className="grid grid-cols-[200px_repeat(7,60px)] bg-[#032921]/80">
           {/* Habit Column Header */}
@@ -176,32 +236,137 @@ export function EnhancedHabitList({ habits, onToggleHabit, onDeleteHabit }: Enha
               >
                 {/* Habit Info */}
                 <div className="flex items-center gap-3 px-4 py-2.5 relative">
-                  <div className={cn(
-                    "w-11 h-11 relative rounded-lg overflow-hidden bg-black/20",
-                    `ring-2 ${companion.colors.accent}`,
-                    "shadow-lg shadow-black/20",
-                    isAnimating && "animate-pulse"
-                  )}>
-                    <img 
-                      src={companion.stages[evolutionStage].image}
-                      alt={`${habit.title} - ${evolutionStage} stage`}
-                      className={cn(
-                        "w-full h-full object-cover transition-all duration-300",
-                        isAnimating ? "scale-125" : "group-hover:scale-110"
+                  <div className="relative group/animal">
+                    <div className={cn(
+                      "w-11 h-11 relative rounded-lg overflow-hidden bg-black/20",
+                      `ring-2 ${companion.colors.accent}`,
+                      "shadow-lg shadow-black/20",
+                      isAnimating && "animate-pulse"
+                    )}>
+                      <img 
+                        src={companion.stages[evolutionStage].image}
+                        alt={`${habit.title} - ${evolutionStage} stage`}
+                        className={cn(
+                          "w-full h-full object-cover transition-all duration-300",
+                          isAnimating ? "scale-125" : "group-hover:scale-110"
+                        )}
+                      />
+                      {evolutionStage === 'achieved' && (
+                        <div className={cn(
+                          "absolute inset-0 flex items-center justify-center",
+                          "bg-gradient-to-t from-black/50 to-transparent"
+                        )}>
+                          <companion.icon className={cn(
+                            "w-4 h-4", 
+                            companion.colors.text,
+                            "animate-bounce"
+                          )} />
+                        </div>
                       )}
-                    />
-                    {evolutionStage === 'achieved' && (
-                      <div className={cn(
-                        "absolute inset-0 flex items-center justify-center",
-                        "bg-gradient-to-t from-black/50 to-transparent"
-                      )}>
-                        <companion.icon className={cn(
-                          "w-4 h-4", 
-                          companion.colors.text,
-                          "animate-bounce"
-                        )} />
+
+                      {/* Evolution Progress Bar */}
+                      {evolutionStage !== 'achieved' && (
+                        <div className="absolute bottom-0 left-0 right-0">
+                          <div className="h-1.5 bg-black/30">
+                            <div 
+                              className={cn(
+                                "h-full transition-all duration-500",
+                                companion.colors.text,
+                                "opacity-80"
+                              )}
+                              style={{ width: `${getEvolutionProgress(habit.streak)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Evolution Tooltip */}
+                    <div className="fixed w-72 p-4 
+                      bg-gradient-to-br from-[#043d2d]/95 to-[#032921]/95 backdrop-blur-md rounded-xl
+                      border border-emerald-600/20 shadow-2xl
+                      transition-all duration-300 scale-0 opacity-0 
+                      group-hover/animal:scale-100 group-hover/animal:opacity-100
+                      pointer-events-none z-[9999]"
+                      style={{
+                        top: 'var(--tooltip-top, 50%)',
+                        left: 'var(--tooltip-left, 50%)',
+                        transform: 'translate(-50%, -100%)',
+                        filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.3))'
+                      }}
+                    >
+                      <div className="text-center space-y-3">
+                        {/* Stage Header */}
+                        <div className="space-y-1.5">
+                          <p className={cn(
+                            "text-base font-semibold",
+                            companion.colors.text
+                          )}>
+                            {evolutionStage.charAt(0).toUpperCase() + evolutionStage.slice(1)} Stage
+                          </p>
+                          <p className="text-white/90 text-sm font-medium">
+                            {getEvolutionMessage(habit.streak, evolutionStage)}
+                          </p>
+                          <p className="text-white/70 text-xs">
+                            {getEvolutionTooltip(habit.streak, evolutionStage)}
+                          </p>
+                        </div>
+                        
+                        {/* Evolution Preview */}
+                        {evolutionStage !== 'achieved' && (
+                          <div className="pt-3 border-t border-white/10">
+                            <div className="flex items-center justify-center gap-6">
+                              {/* Current Stage */}
+                              <div className="text-center space-y-2">
+                                <div className={cn(
+                                  "w-16 h-16 rounded-lg overflow-hidden ring-2",
+                                  companion.colors.accent
+                                )}>
+                                  <img 
+                                    src={companion.stages[evolutionStage].image}
+                                    alt="Current"
+                                    className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-300"
+                                  />
+                                </div>
+                                <span className="text-[11px] text-white/70 font-medium block">Current</span>
+                              </div>
+
+                              {/* Arrow */}
+                              <div className="flex flex-col items-center gap-1">
+                                <div className={cn(
+                                  "w-8 h-[2px]",
+                                  companion.colors.text
+                                )} />
+                                <companion.icon className={cn(
+                                  "w-4 h-4",
+                                  companion.colors.text
+                                )} />
+                              </div>
+
+                              {/* Next Stage */}
+                              <div className="text-center space-y-2">
+                                <div className={cn(
+                                  "w-16 h-16 rounded-lg overflow-hidden ring-2 ring-white/5"
+                                )}>
+                                  <img 
+                                    src={companion.stages[evolutionStage === 'baby' ? 'growing' : 'achieved'].image}
+                                    alt="Next"
+                                    className="w-full h-full object-cover opacity-80 transform hover:scale-110 transition-transform duration-300"
+                                  />
+                                </div>
+                                <span className="text-[11px] text-white/50 font-medium block">Next Stage</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+
+                      {/* Tooltip Arrow */}
+                      <div className="absolute left-1/2 bottom-0 w-4 h-4 -mb-2 
+                        bg-[#032921]/95 transform rotate-45 -translate-x-1/2 
+                        border-r border-b border-emerald-600/20" 
+                      />
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-white truncate">
