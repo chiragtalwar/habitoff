@@ -110,7 +110,8 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
   const habitStats = calculateStats();
 
   const CircularProgress = ({ value, label, color, diff }: { value: number; label: string; color: string; diff: number }) => {
-    const radius = 20;
+    // Make radius responsive based on screen size
+    const radius = 18; // Slightly smaller base radius
     const circumference = 2 * Math.PI * radius;
     const progress = (100 - value) * circumference / 100;
 
@@ -122,11 +123,11 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
 
     return (
       <div className="flex flex-col items-center">
-        <div className="relative w-[56px] h-[56px]">
+        <div className="relative w-[48px] h-[48px] sm:w-[52px] sm:h-[52px] md:w-[56px] md:h-[56px]">
           <svg className="w-full h-full transform -rotate-90">
             <circle
-              cx="28"
-              cy="28"
+              cx="50%"
+              cy="50%"
               r={radius}
               stroke="currentColor"
               strokeWidth="2.5"
@@ -134,8 +135,8 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               className="text-white/5"
             />
             <circle
-              cx="28"
-              cy="28"
+              cx="50%"
+              cy="50%"
               r={radius}
               stroke={color}
               strokeWidth="2.5"
@@ -143,16 +144,15 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               strokeDasharray={circumference}
               strokeDashoffset={progress}
               className="transition-all duration-500"
-              style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-base font-medium text-white">{value}%</span>
+            <span className="text-sm sm:text-base font-medium text-white">{value}%</span>
           </div>
         </div>
-        <span className="mt-1 text-xs text-white/80">{label}</span>
+        <span className="mt-1 text-[10px] sm:text-xs text-white/80">{label}</span>
         <div className={cn(
-          "text-[10px] font-medium mt-0.5",
+          "text-[9px] sm:text-[10px] font-medium mt-0.5",
           diff > 0 ? "text-emerald-300" : "text-orange-300"
         )}>
           {diff > 0 ? '+' : '-'}{Math.abs(diff)}% {getComparisonText()}
@@ -217,12 +217,12 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
   };
 
   return (
-    <div className="space-y-1.5 p-1.5 ml-auto">
+    <div className="space-y-1.5 p-1.5 ml-auto max-h-screen overflow-y-auto">
       {/* Progress Insights */}
-      <div className="rounded-xl bg-[#0F4435] p-2.5">
-        <h2 className="text-sm font-medium text-white mb-1.5">Progress Insights</h2>
-        <div className="grid grid-cols-3 gap-1.5">
-          <div className="rounded-lg bg-[#0B3B2D] p-1.5">
+      <div className="rounded-xl bg-[#0F4435] p-2 sm:p-2.5">
+        <h2 className="text-xs sm:text-sm font-medium text-white mb-1.5">Progress Insights</h2>
+        <div className="grid grid-cols-3 gap-1 sm:gap-1.5">
+          <div className="rounded-lg bg-[#0B3B2D] p-1 sm:p-1.5">
             <CircularProgress 
               value={habitStats.weekly} 
               label="This Week" 
@@ -230,7 +230,7 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               diff={habitStats.weeklyDiff}
             />
           </div>
-          <div className="rounded-lg bg-[#0B3B2D] p-1.5">
+          <div className="rounded-lg bg-[#0B3B2D] p-1 sm:p-1.5">
             <CircularProgress 
               value={habitStats.monthly} 
               label="This Month" 
@@ -238,7 +238,7 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               diff={habitStats.monthlyDiff}
             />
           </div>
-          <div className="rounded-lg bg-[#0B3B2D] p-1.5">
+          <div className="rounded-lg bg-[#0B3B2D] p-1 sm:p-1.5">
             <CircularProgress 
               value={habitStats.yearly} 
               label="This Year" 
@@ -250,10 +250,10 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
       </div>
 
       {/* Activity Timeline */}
-      <div className="rounded-xl bg-[#0F4435] p-2.5">
+      <div className="rounded-xl bg-[#0F4435] p-2 sm:p-2.5">
         <div className="flex items-center justify-between mb-1.5">
-          <h2 className="text-sm font-medium text-white">Activity Timeline</h2>
-          <div className="flex gap-3 text-xs">
+          <h2 className="text-xs sm:text-sm font-medium text-white">Activity Timeline</h2>
+          <div className="flex gap-2 sm:gap-3 text-[10px] sm:text-xs">
             {(['week', 'month', 'year'] as const).map((range) => (
               <button
                 key={range}
@@ -270,16 +270,16 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
             ))}
           </div>
         </div>
-        <div className="bg-[#0B3B2D] rounded-lg p-2.5 h-[130px]">
+        <div className="bg-[#0B3B2D] rounded-lg p-2 sm:p-2.5 h-[100px] sm:h-[120px] md:h-[130px]">
           <Timeline habits={habits} timeRange={timeRange} />
         </div>
       </div>
 
       {/* Monthly Calendar */}
-      <div className="rounded-xl bg-[#0F4435] p-2.5">
+      <div className="rounded-xl bg-[#0F4435] p-2 sm:p-2.5">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center gap-1.5 ml-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <div className="flex items-center gap-1 sm:gap-1.5">
               <button
                 onClick={handlePrevMonth}
                 className="p-0.5 rounded-lg bg-white/5 text-white/30 hover:bg-emerald-500/20 hover:text-emerald-300 
@@ -287,7 +287,7 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               >
                 <ChevronLeft className="w-3 h-3" />
               </button>
-              <h2 className="text-sm font-medium text-white whitespace-nowrap">{getCurrentMonth()}</h2>
+              <h2 className="text-xs sm:text-sm font-medium text-white whitespace-nowrap">{getCurrentMonth()}</h2>
               <button
                 onClick={handleNextMonth}
                 disabled={monthOffset >= 0}
@@ -299,7 +299,7 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               </button>
             </div>
             {currentHabit && (
-              <div className="text-xs text-emerald-400/90 bg-emerald-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0 min-w-[42px] text-center">
+              <div className="text-[10px] sm:text-xs text-emerald-400/90 bg-emerald-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0 min-w-[42px] text-center">
                 {(() => {
                   const currentDate = new Date();
                   currentDate.setMonth(currentDate.getMonth() + monthOffset);
@@ -319,27 +319,27 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1 ml-3 flex-shrink-0 w-[120px]">
+          <div className="flex items-center gap-1 ml-2 sm:ml-3 flex-shrink-0 w-[100px] sm:w-[120px]">
             <button
               onClick={prevHabit}
-              className="w-5 h-5 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center flex-shrink-0"
+              className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center flex-shrink-0"
             >
-              <ArrowLeft className="w-3 h-3" />
+              <ArrowLeft className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             </button>
-            <span className="text-xs text-white/60 bg-[#0B3B2D] px-1.5 py-0.5 rounded-full flex-1 truncate text-center">
+            <span className="text-[10px] sm:text-xs text-white/60 bg-[#0B3B2D] px-1.5 py-0.5 rounded-full flex-1 truncate text-center">
               {currentHabit?.title || 'No habits'}
             </span>
             <button
               onClick={nextHabit}
-              className="w-5 h-5 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center flex-shrink-0"
+              className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#0B3B2D] hover:bg-[#0d4535] text-white/60 hover:text-white transition-colors flex items-center justify-center flex-shrink-0"
             >
-              <ArrowRight className="w-3 h-3" />
+              <ArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             </button>
           </div>
         </div>
         <div className="grid grid-cols-7 gap-0.5">
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-            <div key={day} className="text-[10px] font-medium text-emerald-300/80 text-center">
+            <div key={day} className="text-[9px] sm:text-[10px] font-medium text-emerald-300/80 text-center">
               {day}
             </div>
           ))}
@@ -364,7 +364,7 @@ export const AnalyticsPanel = ({ habits }: AnalyticsPanelProps) => {
               <div
                 key={day}
                 className={cn(
-                  "aspect-square rounded-sm flex items-center justify-center text-[10px] transition-all duration-300",
+                  "aspect-square rounded-sm flex items-center justify-center text-[9px] sm:text-[10px] transition-all duration-300",
                   isCompleted ? "bg-emerald-500/80 text-emerald-50 font-medium" : "bg-[#0B3B2D]",
                   isToday && "ring-1 ring-emerald-400",
                   !isPast && "opacity-40",

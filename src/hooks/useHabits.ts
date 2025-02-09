@@ -11,7 +11,7 @@ export function useHabits() {
   const syncTimeoutRef = useRef<number | null>(null);
   const isInitializedRef = useRef(false);
 
-  // Initialize cache when user changes
+  // Initialize cache and load habits immediately when user is available
   useEffect(() => {
     if (!user?.id) {
       setHabits([]);
@@ -21,18 +21,32 @@ export function useHabits() {
     }
 
     const initializeAndLoad = async () => {
-      if (!isInitializedRef.current) {
+      try {
+        setIsLoading(true);
+        
+        // First try to load from cache immediately
         try {
-          setIsLoading(true);
+          const cachedHabits = await habitService.getLocalHabits();
+          if (cachedHabits.length > 0) {
+            setHabits(cachedHabits);
+          }
+        } catch (err) {
+          console.warn('Failed to load from cache:', err);
+        }
+
+        // Then initialize and sync
+        if (!isInitializedRef.current) {
           await habitService.initializeCache(user.id);
           isInitializedRef.current = true;
-          await loadHabits(true);
-        } catch (err) {
-          console.error('Failed to initialize cache:', err);
-          setError(err instanceof Error ? err : new Error('Failed to initialize cache'));
-        } finally {
-          setIsLoading(false);
         }
+        
+        // Finally, get the latest data
+        await loadHabits(true);
+      } catch (err) {
+        console.error('Failed to initialize cache:', err);
+        setError(err instanceof Error ? err : new Error('Failed to initialize cache'));
+      } finally {
+        setIsLoading(false);
       }
     };
 
